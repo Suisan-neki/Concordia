@@ -80,17 +80,21 @@ Concordia の設計は、これら**内在的脅威を中和する構造**を持
 
 ### 3.1 概念構造
 
+### 3.1 概念構造（Conceptual Structure）
+
 患者 ── 対話 ── 医師
-│ │
-├─ 理解行動ログ ─┤
-│ │
-───────────────
-Concordia Layer
-├─ Zero Pressure Architecture (ZPA)
-├─ Comprehension Ledger (理解台帳)
-├─ Merkle Integrity Chain
-├─ Selective Visibility (ABAC)
-───────────────
+   │                │
+   ├─── 理解行動ログ ───┤
+   │                │
+───────────────────────────────
+             Concordia Layer
+───────────────────────────────
+   ├─ Zero Pressure Architecture (ZPA)
+   ├─ Comprehension Ledger（理解台帳）
+   ├─ Merkle Integrity Chain
+   └─ Selective Visibility（ABAC）
+───────────────────────────────
+
 
 
 ### 3.2 基本原理
