@@ -78,24 +78,17 @@ Concordia の設計は、これら**内在的脅威を中和する構造**を持
 
 ## 3. システム概要（System Overview）
 
-### 3.1 概念構造
-
 ### 3.1 概念構造（Conceptual Structure）
 
-患者 ── 対話 ── 医師
-   │                │
-   ├─── 理解行動ログ ───┤
-   │                │
-───────────────────────────────
-             Concordia Layer
-───────────────────────────────
-   ├─ Zero Pressure Architecture (ZPA)
-   ├─ Comprehension Ledger（理解台帳）
-   ├─ Merkle Integrity Chain
-   └─ Selective Visibility（ABAC）
-───────────────────────────────
-
-
+| レイヤ / 要素 | 説明 |
+|----------------|------|
+| **患者 ── 対話 ── 医師** | 診療室内の説明・理解・同意プロセスを双方向に接続する。 |
+| **理解行動ログ** | 双方の操作・質問・閲覧行動を時系列に記録する中核データ。 |
+| **Concordia Layer** | 以下4要素から構成される、理解・安心・透明性を支える基盤層。 |
+| ├─ Zero Pressure Architecture (ZPA) | 圧力ゼロ設計。行動が強制ではなく選択であることを保証するUI／設計思想。 |
+| ├─ Comprehension Ledger（理解台帳） | 理解行動を暗号署名付きトランザクションとして保存。 |
+| ├─ Merkle Integrity Chain | 全履歴の改ざん検知を担うハッシュチェーン構造。 |
+| └─ Selective Visibility（ABAC） | 役割・目的ごとに開示範囲を制御する属性ベースアクセス制御。 |
 
 ### 3.2 基本原理
 
