@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .infra.db import init_db
-from .routers import audit, auth, events, view
+from .routers import audit, auth, events, metrics, view
 
 
 @asynccontextmanager
@@ -20,6 +20,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
     app.include_router(audit.router, prefix="/audit", tags=["audit"])
     app.include_router(view.router, prefix="/view", tags=["view"])
+    app.include_router(metrics.router, prefix="/metrics", tags=["metrics"])
 
     return app
 
