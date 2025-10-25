@@ -112,3 +112,15 @@ class MetricsSnapshotRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AccessLog(SQLModel, table=True):
+    __tablename__ = "access_logs"
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    actor_id: str = SQLField(index=True)
+    role: str
+    action: str
+    resource: str
+    allowed: bool = SQLField(default=True)
+    created_at: datetime = SQLField(default_factory=datetime.utcnow, nullable=False, index=True)

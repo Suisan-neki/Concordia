@@ -1,15 +1,29 @@
 """ABAC policy helpers."""
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
 class PolicyContext:
+    subject_id: str
     role: str
-    purpose: str
-    sensitivity: str
+    purpose: str = "care"
+    sensitivity: str = "standard"
 
 
-def is_allowed(context: PolicyContext, action: str) -> bool:
-    """Placeholder hook for oso/casbin evaluation."""
-    # TODO: integrate actual policy engine
-    return True
+def is_allowed(
+    context: PolicyContext,
+    action: str,
+    resource_owner: Optional[str] = None,
+) -> bool:
+    """Very simple ABAC stub until full engine is integrated."""
+    if context.role == "admin":
+        return True
+    if context.role == "doctor":
+        return context.purpose in {"care", "audit"}
+    if context.role == "patient":
+        if action in {"submit_clarify", "revisit"}:
+            return True
+        if action in {"view_timeline"}:
+            return resource_owner is None or resource_owner == context.subject_id
+    return False
