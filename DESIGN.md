@@ -323,7 +323,7 @@ payload 本体は `storage.py`（S3/WORM）に格納し、ABAC でマスキン�
 
 - `clarify_request_rate = (#act=clarify_request + #act=ask_later) / total_sessions`  
 - `re_explain_rate`, `post_view_rate`, `pending_rate`, `revocation_rate`.  
-- Zero Pressure 指標が上がるほど「安心度」が高いと解釈し、週次レポートを自動生成。
+- Zero Pressure 指標は「安心ゾーン（Calm / Observe / Focus）」として表示し、上がった/下がったという競争感を生まないようにする。
 
 ---
 
@@ -356,29 +356,31 @@ payload 本体は `storage.py`（S3/WORM）に格納し、ABAC でマスキン�
 ```
 Zero Pressure Dashboard
 -----------------------
-Re-question rate     ██████ 42%
-Re-explain rate      ████   31%
-Pending rate         ██     15%
-Post-view rate       ██████ 45%
-Revoke rate          █      3%
+Clarify requests   ██████  “十分に問い直せています”
+Re-explain events  ████    “追加説明が活発です”
+Pending decisions  ██      “即決を避けた割合”
+Post-view events   ██████  “後日フォローが続いています”
+Revoke events      █      “正当な撤回が機能中”
 
-[Trust Indicator: 0.78]   ↗︎ week over week
+Comfort Zone: Calm (今週は選択肢が豊富な空気)
+Next check-in: optional – 見ないを選べます
 ```
 
-トレンド矢印や色で「上がるほど心理的安全が高い」ことを即伝える。スクリーンショット1枚でコンセプトが伝わるようにする。
+トレンド矢印や色ではなく「ゾーン名（Calm / Observe / Focus）」で今の空気を伝え、数値競争を避ける。スクリーンショット1枚でコンセプトが伝わるようにする。
 
 ### 16.4 技術的ポイント
 
 - 集計は SQL (window function) で即算出できるため、PoC では DB 集約 + Celery で十分。  
 - イベントストリームを Kafka へ拡張すれば、リアルタイムに WebSocket でダッシュボード更新も可能。  
 - 指標自体も Merkle チェーンにハッシュを残すことで、後から「このグラフは改ざんされていない」証明ができる。  
-- 指標が悪化した場合は自動的にアラート（Slack/Webhook）を送信し、再設計・再教育のトリガにする。
+- 指標は 0〜1 のスコアではなく、「Calm（安心に富む）」「Observe（様子を見る）」「Focus（再設計を検討）」の3ゾーンに分類する。基準は過去4週平均との乖離やメタデータ補正を用いて柔らかく判定する。  
+- ゾーンが Focus に入った場合のみ通知（Slack/Webhook）を送り、誰かを責めるのではなく UI/プロセス改善の対話を始めるトリガにする。
 
 ### 16.5 PoC TODO
 
 1. `metrics_snapshot` テーブルと Celery タスクを実装。  
 2. FastAPI で `/metrics/zero-pressure` API を用意し、Next.js でチャート描画。  
-3. 「安心度 0〜1」を算出するシンプルな式（例: 再確認リクエスト率 + 再閲覧率 - 保留過多ペナルティ）を定義。  
+3. Clarify/再閲覧/再説明/保留のバランスから「安心ゾーン（Calm/Observe/Focus）」を判定するロジックを定義（例: ベースラインとの乖離 + メタデータ補正）。  
 4. 指標差分を Merkle チェーンに刻み、`verify-metrics` CLI を提供。  
 5. 毎週の PDF レポートを自動生成し、スクリーンショットベースのデモ資料を準備。
 
