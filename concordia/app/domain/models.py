@@ -30,6 +30,12 @@ class ActType(str, Enum):
     RE_VIEW = "re_view"
 
 
+class ComfortZone(str, Enum):
+    CALM = "calm"
+    OBSERVE = "observe"
+    FOCUS = "focus"
+
+
 class UnderstandingEvent(SQLModel, table=True):
     """Immutable understanding-event row stored in PostgreSQL."""
 
@@ -89,7 +95,7 @@ class MetricsSnapshot(SQLModel, table=True):
     post_view_rate: float = SQLField(default=0.0)
     pending_rate: float = SQLField(default=0.0)
     revoke_rate: float = SQLField(default=0.0)
-    comfort_index: float = SQLField(default=0.0)
+    comfort_zone: ComfortZone = SQLField(default=ComfortZone.CALM)
     calculated_at: datetime = SQLField(default_factory=datetime.utcnow, nullable=False)
 
 
@@ -101,7 +107,7 @@ class MetricsSnapshotRead(BaseModel):
     post_view_rate: float
     pending_rate: float
     revoke_rate: float
-    comfort_index: float
+    comfort_zone: ComfortZone
     calculated_at: datetime
 
     class Config:
