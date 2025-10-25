@@ -61,3 +61,17 @@ def zone_message(zone: ComfortZone) -> str:
         ComfortZone.OBSERVE: "少し様子を見て改善点を探りましょう",
         ComfortZone.FOCUS: "再説明やUIの調整を検討するタイミングです",
     }[zone]
+
+
+class ClarifyRequestBody(BaseModel):
+    actor_id: str
+    actor_type: ActorType = ActorType.PATIENT
+    preset: Optional[str] = None
+    note: Optional[str] = None
+    ask_later: bool = False
+
+
+class RevisitRequestBody(BaseModel):
+    actor_id: str
+    actor_type: ActorType = ActorType.PATIENT
+    note: Optional[str] = None
