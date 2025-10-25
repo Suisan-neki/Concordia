@@ -1,0 +1,28 @@
+[project]
+name = "concordia"
+version = "0.1.0"
+description = "Zero Pressure comprehension ledger for clinical consent"
+authors = [{name = "Concordia Team"}]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "pydantic>=2.6",
+  "sqlalchemy>=2.0",
+  "sqlmodel>=0.0.18",
+  "psycopg[binary]",
+  "cryptography",
+  "celery",
+  "redis",
+]
+
+[project.optional-dependencies]
+abac = [
+  "oso",
+  "pycasbin",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
