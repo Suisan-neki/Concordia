@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, Session
 
-DATABASE_URL = "postgresql+psycopg://concordia:concordia@localhost:5432/concordia"
+DATABASE_URL = "postgresql+psycopg://concordia:concordia@db:5432/concordia"
 
 engine = create_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = sessionmaker(
