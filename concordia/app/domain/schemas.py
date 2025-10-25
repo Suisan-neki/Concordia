@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from .models import ActType, ActorType
+from .models import ActType, ActorType, MetricsSnapshotRead
 
 
 class ChallengeRequest(BaseModel):
@@ -40,3 +40,7 @@ class UnderstandingEventOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MetricsSnapshotOut(MetricsSnapshotRead):
+    pass

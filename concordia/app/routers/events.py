@@ -5,11 +5,18 @@ from fastapi import APIRouter, Depends, status
 from sqlmodel import Session, select
 
 from ..deps import db_session
-from ..domain.models import UnderstandingEvent, UnderstandingEventCreate
+from ..domain.models import ActType, UnderstandingEvent, UnderstandingEventCreate
 from ..domain.schemas import UnderstandingEventIn, UnderstandingEventOut
 from ..services.ledger import LedgerService
+from ..services.telemetry import TelemetryService
 
 router = APIRouter()
+
+TELEMETRY_TRIGGER_ACTS = {
+    ActType.AGREE,
+    ActType.REAGREE,
+    ActType.REVOKE,
+}
 
 
 @router.get("/", response_model=List[UnderstandingEventOut])
@@ -30,4 +37,8 @@ def append_event(
 ) -> UnderstandingEventOut:
     ledger = LedgerService(session)
     event = ledger.append(UnderstandingEventCreate(**event_in.model_dump()))
+
+    if event.act_type in TELEMETRY_TRIGGER_ACTS:
+        TelemetryService(session).snapshot_for_session(event.session_id)
+
     return event
