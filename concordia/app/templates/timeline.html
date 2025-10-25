@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>Concordia Timeline</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    header { margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; }
+    th { background: #f4f4f4; }
+    .zone { padding: 0.4rem 0.8rem; border-radius: 999px; display: inline-block; }
+    .calm { background: #def7ec; color: #03543f; }
+    .observe { background: #fef3c7; color: #92400e; }
+    .focus { background: #fee2e2; color: #991b1b; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+    form { margin-bottom: 1.5rem; }
+    label { display: block; margin-bottom: 0.4rem; }
+    input[type="text"] { width: 100%; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Session {{ session_id }}</h1>
+    {% if metrics %}
+      <p>
+        Comfort Zone:
+        <span class="zone {{ metrics.comfort_zone }}">
+          {{ metrics.zone_label or metrics.comfort_zone }}
+        </span><br />
+        <small>{{ metrics.zone_message or '' }}</small>
+      </p>
+    {% endif %}
+  </header>
+
+  <section>
+    <h2>Understanding Events</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>time</th>
+          <th>actor</th>
+          <th>act</th>
+          <th>payload</th>
+          <th>curr hash</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+        <tr>
+          <td>{{ event.created_at }}</td>
+          <td>{{ event.actor_type }} ({{ event.actor_id }})</td>
+          <td>{{ event.act_type }}</td>
+          <td><pre>{{ event.payload }}</pre></td>
+          <td><small>{{ event.curr_hash }}</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Clarify Request</h2>
+    <form method="post" action="/view/sessions/{{ session_id }}/clarify">
+      <input type="hidden" name="actor_id" value="{{ viewer_id }}" />
+      <input type="hidden" name="actor_type" value="patient" />
+      <label>
+        Preset:
+        <input type="text" name="preset" />
+      </label>
+      <label>
+        Note:
+        <input type="text" name="note" />
+      </label>
+      <label>
+        <input type="checkbox" name="ask_later" value="true" /> あとで聞く
+      </label>
+      <button type="submit">Send Clarify</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Revisit</h2>
+    <form method="post" action="/view/sessions/{{ session_id }}/revisit">
+      <input type="hidden" name="actor_id" value="{{ viewer_id }}" />
+      <input type="hidden" name="actor_type" value="patient" />
+      <label>
+        Note:
+        <input type="text" name="note" />
+      </label>
+      <button type="submit">Record Revisit</button>
+    </form>
+  </section>
+</body>
+</html>

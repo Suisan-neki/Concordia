@@ -1,7 +1,9 @@
 """Patient/physician view routes."""
 from typing import List
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from ..deps import db_session
@@ -14,11 +16,16 @@ from ..domain.schemas import (
 from ..domain.policy import PolicyContext
 from ..services.abac import AccessEvaluator
 from ..services.ledger import LedgerService
+from ..services.telemetry import TelemetryService
 
 router = APIRouter()
+templates = Jinja2Templates(directory="concordia/app/templates")
 
 
-@router.get("/sessions/{session_id}/timeline", response_model=List[UnderstandingEventOut])
+@router.get(
+    "/sessions/{session_id}/timeline",
+    response_model=List[UnderstandingEventOut],
+)
 def session_timeline(
     session_id: str,
     viewer_id: str,
@@ -36,6 +43,39 @@ def session_timeline(
         .order_by(UnderstandingEvent.created_at.asc())
     )
     return session.exec(stmt).all()
+
+
+@router.get(
+    "/sessions/{session_id}/timeline/html",
+    response_class=HTMLResponse,
+)
+def session_timeline_html(
+    request: Request,
+    session_id: str,
+    viewer_id: str,
+    session: Session = Depends(db_session),
+):
+    events = session_timeline(
+        session_id=session_id,
+        viewer_id=viewer_id,
+        viewer_role=ActorType.PATIENT,
+        session=session,
+    )
+    metrics = (
+        TelemetryService(session).snapshot_for_session(session_id)
+        if events
+        else None
+    )
+    return templates.TemplateResponse(
+        "timeline.html",
+        {
+            "request": request,
+            "session_id": session_id,
+            "viewer_id": viewer_id,
+            "events": events,
+            "metrics": metrics,
+        },
+    )
 
 
 @router.post(
