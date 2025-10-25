@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from .models import ActType, ActorType, MetricsSnapshotRead
+from .models import ActType, ActorType, ComfortZone, MetricsSnapshotRead
 
 
 class ChallengeRequest(BaseModel):
@@ -43,4 +43,21 @@ class UnderstandingEventOut(BaseModel):
 
 
 class MetricsSnapshotOut(MetricsSnapshotRead):
-    pass
+    zone_label: str | None = None
+    zone_message: str | None = None
+
+
+def zone_label(zone: ComfortZone) -> str:
+    return {
+        ComfortZone.CALM: "Calm",
+        ComfortZone.OBSERVE: "Observe",
+        ComfortZone.FOCUS: "Focus",
+    }[zone]
+
+
+def zone_message(zone: ComfortZone) -> str:
+    return {
+        ComfortZone.CALM: "選択肢が十分あり、落ち着いた空気です",
+        ComfortZone.OBSERVE: "少し様子を見て改善点を探りましょう",
+        ComfortZone.FOCUS: "再説明やUIの調整を検討するタイミングです",
+    }[zone]
