@@ -19,13 +19,6 @@ def list_metrics(session: Session = Depends(db_session)) -> List[MetricsSnapshot
 
 
 
-@router.get("/summary")
-def metrics_summary(days: int = Query(7, ge=1, le=90), session: Session = Depends(db_session)):
-    """Return averaged metrics and zone distribution over the past N days."""
-    summary = TelemetryService(session).summary(days=days)
-    return summary
-
-
 @router.get("/{session_id}", response_model=MetricsSnapshotOut)
 def get_latest_metrics(session_id: str, session: Session = Depends(db_session)) -> MetricsSnapshotOut:
     stmt = (
@@ -51,10 +44,3 @@ def _with_zone_copy(snapshot: MetricsSnapshot) -> MetricsSnapshotOut:
     base.zone_label = zone_label(snapshot.comfort_zone)
     base.zone_message = zone_message(snapshot.comfort_zone)
     return base
-
-
-@router.get("/summary")
-def metrics_summary(days: int = Query(7, ge=1, le=90), session: Session = Depends(db_session)):
-    """Return averaged metrics and zone distribution over the past N days."""
-    summary = TelemetryService(session).summary(days=days)
-    return summary

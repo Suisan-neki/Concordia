@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>Concordia Debug Overview</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    h1, h2 { margin-top: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+    th, td { border: 1px solid #ddd; padding: 0.4rem; font-size: 0.9rem; }
+    th { background: #f4f4f4; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    .zone { padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: bold; }
+    .calm { background: #def7ec; color: #03543f; }
+    .observe { background: #fef3c7; color: #92400e; }
+    .focus { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <h1>Concordia Debug Overview</h1>
+  <section>
+    <h2>Comfort Zone Summary ({{ summary['window_days'] }} days)</h2>
+    <p>
+      Snapshots: {{ summary['snapshots'] }}<br />
+      Clarify avg: {{ summary['averages']['clarify_request_rate'] }} / Re-explain avg: {{ summary['averages']['re_explain_rate'] }}<br />
+      Post-view avg: {{ summary['averages']['post_view_rate'] }} / Pending avg: {{ summary['averages']['pending_rate'] }} / Revoke avg: {{ summary['averages']['revoke_rate'] }}
+    </p>
+    <ul>
+      <li><span class="zone calm">Calm</span> {{ summary['zone_counts']['calm'] }}</li>
+      <li><span class="zone observe">Observe</span> {{ summary['zone_counts']['observe'] }}</li>
+      <li><span class="zone focus">Focus</span> {{ summary['zone_counts']['focus'] }}</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Latest Metrics Snapshots</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>session</th>
+          <th>zone</th>
+          <th>clarify</th>
+          <th>re_explain</th>
+          <th>pending</th>
+          <th>revoke</th>
+          <th>timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for metric in metrics %}
+        <tr>
+          <td>{{ metric.session_id }}</td>
+          <td><span class="zone {{ metric.comfort_zone }}">{{ metric.zone_label or metric.comfort_zone }}</span></td>
+          <td>{{ metric.clarify_request_rate }}</td>
+          <td>{{ metric.re_explain_rate }}</td>
+          <td>{{ metric.pending_rate }}</td>
+          <td>{{ metric.revoke_rate }}</td>
+          <td>{{ metric.calculated_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Recent Access Logs</h2>
+    <table>
+      <thead>
+        <tr><th>time</th><th>actor</th><th>role</th><th>action</th><th>resource</th><th>allowed</th></tr>
+      </thead>
+      <tbody>
+        {% for log in access_logs %}
+        <tr>
+          <td>{{ log.created_at }}</td>
+          <td>{{ log.actor_id }}</td>
+          <td>{{ log.role }}</td>
+          <td>{{ log.action }}</td>
+          <td>{{ log.resource }}</td>
+          <td>{{ log.allowed }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Latest Signature Records</h2>
+    <table>
+      <thead>
+        <tr><th>time</th><th>event</th><th>actor</th><th>signature</th><th>tsa</th></tr>
+      </thead>
+      <tbody>
+        {% for sig in signatures %}
+        <tr>
+          <td>{{ sig.created_at }}</td>
+          <td>{{ sig.event_id }}</td>
+          <td>{{ sig.actor_id }}</td>
+          <td><pre>{{ sig.signature_hex }}</pre></td>
+          <td><pre>{{ sig.tsa_token }}</pre></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>
