@@ -1,8 +1,16 @@
 """Ed25519 signing helper."""
 from typing import Tuple
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+)
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    NoEncryption,
+    PrivateFormat,
+    PublicFormat,
+)
 
 
 def generate_keypair() -> Tuple[bytes, bytes]:
@@ -17,3 +25,8 @@ def generate_keypair() -> Tuple[bytes, bytes]:
 def sign_message(private_bytes: bytes, message: bytes) -> bytes:
     private_key = Ed25519PrivateKey.from_private_bytes(private_bytes)
     return private_key.sign(message)
+
+
+def verify_signature(public_bytes: bytes, message: bytes, signature: bytes) -> None:
+    public_key = Ed25519PublicKey.from_public_bytes(public_bytes)
+    public_key.verify(signature, message)

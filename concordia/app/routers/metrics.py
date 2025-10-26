@@ -1,7 +1,7 @@
 """Metrics endpoints for Zero Pressure telemetry."""
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, select
 
 from ..deps import db_session
@@ -16,6 +16,14 @@ router = APIRouter()
 def list_metrics(session: Session = Depends(db_session)) -> List[MetricsSnapshotOut]:
     stmt = select(MetricsSnapshot).order_by(MetricsSnapshot.calculated_at.desc()).limit(50)
     return [_with_zone_copy(snapshot) for snapshot in session.exec(stmt).all()]
+
+
+
+@router.get("/summary")
+def metrics_summary(days: int = Query(7, ge=1, le=90), session: Session = Depends(db_session)):
+    """Return averaged metrics and zone distribution over the past N days."""
+    summary = TelemetryService(session).summary(days=days)
+    return summary
 
 
 @router.get("/{session_id}", response_model=MetricsSnapshotOut)
@@ -43,3 +51,10 @@ def _with_zone_copy(snapshot: MetricsSnapshot) -> MetricsSnapshotOut:
     base.zone_label = zone_label(snapshot.comfort_zone)
     base.zone_message = zone_message(snapshot.comfort_zone)
     return base
+
+
+@router.get("/summary")
+def metrics_summary(days: int = Query(7, ge=1, le=90), session: Session = Depends(db_session)):
+    """Return averaged metrics and zone distribution over the past N days."""
+    summary = TelemetryService(session).summary(days=days)
+    return summary

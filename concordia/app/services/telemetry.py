@@ -4,9 +4,17 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable
 
+from datetime import timedelta
+
+from sqlalchemy import case, func
 from sqlmodel import Session, select
 
-from ..domain.models import ActType, ComfortZone, MetricsSnapshot, UnderstandingEvent
+from ..domain.models import (
+    ActType,
+    ComfortZone,
+    MetricsSnapshot,
+    UnderstandingEvent,
+)
 
 
 class TelemetryService:
@@ -77,3 +85,36 @@ class TelemetryService:
         if score >= -0.05:
             return ComfortZone.OBSERVE
         return ComfortZone.FOCUS
+
+    def summary(self, days: int = 7) -> dict:
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        stmt = select(
+            func.count(MetricsSnapshot.id),
+            func.avg(MetricsSnapshot.clarify_request_rate),
+            func.avg(MetricsSnapshot.re_explain_rate),
+            func.avg(MetricsSnapshot.post_view_rate),
+            func.avg(MetricsSnapshot.pending_rate),
+            func.avg(MetricsSnapshot.revoke_rate),
+            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.CALM, 1), else_=0)),
+            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.OBSERVE, 1), else_=0)),
+            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.FOCUS, 1), else_=0)),
+        ).where(MetricsSnapshot.calculated_at >= cutoff)
+        result = self.session.exec(stmt).first()
+        total = result[0] or 0
+        zone_counts = {
+            ComfortZone.CALM.value: int(result[6] or 0),
+            ComfortZone.OBSERVE.value: int(result[7] or 0),
+            ComfortZone.FOCUS.value: int(result[8] or 0),
+        }
+        return {
+            "window_days": days,
+            "snapshots": total,
+            "averages": {
+                "clarify_request_rate": result[1] or 0.0,
+                "re_explain_rate": result[2] or 0.0,
+                "post_view_rate": result[3] or 0.0,
+                "pending_rate": result[4] or 0.0,
+                "revoke_rate": result[5] or 0.0,
+            },
+            "zone_counts": zone_counts,
+        }
