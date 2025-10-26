@@ -17,7 +17,7 @@ def is_allowed(
     if context.role == "doctor":
         return True
     if context.role == "patient":
-        if action in {"submit_clarify", "revisit"}:
+        if action in {"submit_clarify", "revisit", "send_signal"}:
             return True
         if action == "view_timeline":
             return resource_owner is None or resource_owner == context.subject_id

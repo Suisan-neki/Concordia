@@ -94,3 +94,13 @@ class ActorKeyOut(ActorKeyRead):
 
 class SignatureRecordOut(SignatureRecordRead):
     pass
+
+
+class SignalEventIn(BaseModel):
+    actor_id: str
+    actor_type: ActorType = ActorType.PATIENT
+    signal_type: str = Field(
+        ...,
+        description="one of: ack, question, praise",
+        pattern="^(ack|question|praise)$",
+    )

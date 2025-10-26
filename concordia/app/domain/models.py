@@ -28,6 +28,9 @@ class ActType(str, Enum):
     REAGREE = "reagree"
     REVOKE = "revoke"
     RE_VIEW = "re_view"
+    SIGNAL_ACK = "signal_ack"  # 「伝わっています」
+    SIGNAL_QUESTION = "signal_question"  # 「質問したい！」
+    SIGNAL_PRAISE = "signal_praise"  # 「今の説明はいいね！」
 
 
 class ComfortZone(str, Enum):
@@ -196,5 +199,35 @@ class SessionRecordRead(BaseModel):
     artifact_hash: str
     created_at: datetime
     status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ComprehensionAssessment(SQLModel, table=True):
+    """LLM-based comprehension quality assessment per session."""
+
+    __tablename__ = "comprehension_assessments"
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    session_id: str = SQLField(index=True)
+    overall_quality: ComprehensionQuality = SQLField(default=ComprehensionQuality.MODERATE)
+    confidence_score: float = SQLField(default=0.5)  # 0.0-1.0
+    reasoning: str = SQLField(default="")  # LLM の判定理由
+    concerns: str = SQLField(default="")  # 懸念点・改善提案
+    metadata: Dict[str, Any] = SQLField(
+        sa_column=Column(JSON, nullable=False, server_default="{}")
+    )  # プロンプト・モデル・バージョン等
+    calculated_at: datetime = SQLField(default_factory=datetime.utcnow, nullable=False, index=True)
+
+
+class ComprehensionAssessmentRead(BaseModel):
+    id: str
+    session_id: str
+    overall_quality: ComprehensionQuality
+    confidence_score: float
+    reasoning: str
+    concerns: str
+    metadata: Dict[str, Any]
+    calculated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

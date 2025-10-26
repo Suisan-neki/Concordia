@@ -61,38 +61,5 @@
       </tbody>
     </table>
   </section>
-
-  <section>
-    <h2>Clarify Request</h2>
-    <form method="post" action="/view/sessions/{{ session_id }}/clarify">
-      <input type="hidden" name="actor_id" value="{{ viewer_id }}" />
-      <input type="hidden" name="actor_type" value="patient" />
-      <label>
-        Preset:
-        <input type="text" name="preset" />
-      </label>
-      <label>
-        Note:
-        <input type="text" name="note" />
-      </label>
-      <label>
-        <input type="checkbox" name="ask_later" value="true" /> あとで聞く
-      </label>
-      <button type="submit">Send Clarify</button>
-    </form>
-  </section>
-
-  <section>
-    <h2>Revisit</h2>
-    <form method="post" action="/view/sessions/{{ session_id }}/revisit">
-      <input type="hidden" name="actor_id" value="{{ viewer_id }}" />
-      <input type="hidden" name="actor_type" value="patient" />
-      <label>
-        Note:
-        <input type="text" name="note" />
-      </label>
-      <button type="submit">Record Revisit</button>
-    </form>
-  </section>
 </body>
 </html>

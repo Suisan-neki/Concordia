@@ -13,6 +13,7 @@ from ..domain.models import (
     ActType,
     ComfortZone,
     MetricsSnapshot,
+    SessionRecord,
     UnderstandingEvent,
 )
 
@@ -88,17 +89,7 @@ class TelemetryService:
 
     def summary(self, days: int = 7) -> dict:
         cutoff = datetime.utcnow() - timedelta(days=days)
-        stmt = select(
-            func.count(MetricsSnapshot.id),
-            func.avg(MetricsSnapshot.clarify_request_rate),
-            func.avg(MetricsSnapshot.re_explain_rate),
-            func.avg(MetricsSnapshot.post_view_rate),
-            func.avg(MetricsSnapshot.pending_rate),
-            func.avg(MetricsSnapshot.revoke_rate),
-            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.CALM, 1), else_=0)),
-            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.OBSERVE, 1), else_=0)),
-            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.FOCUS, 1), else_=0)),
-        ).where(MetricsSnapshot.calculated_at >= cutoff)
+        stmt = self._summary_stmt().where(MetricsSnapshot.calculated_at >= cutoff)
         result = self.session.exec(stmt).first()
         total = result[0] or 0
         zone_counts = {
@@ -118,3 +109,51 @@ class TelemetryService:
             },
             "zone_counts": zone_counts,
         }
+
+    def doctor_summary(self, doctor_id: str, days: int = 30) -> dict:
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        stmt = (
+            self._summary_stmt()
+            .join(SessionRecord, SessionRecord.id == MetricsSnapshot.session_id)
+            .where(SessionRecord.doctor_id == doctor_id)
+            .where(MetricsSnapshot.calculated_at >= cutoff)
+        )
+        result = self.session.exec(stmt).first()
+        if not result or result[0] is None:
+            return {
+                "doctor_id": doctor_id,
+                "window_days": days,
+                "snapshots": 0,
+                "averages": {},
+                "zone_counts": {},
+            }
+        return {
+            "doctor_id": doctor_id,
+            "window_days": days,
+            "snapshots": int(result[0] or 0),
+            "averages": {
+                "clarify_request_rate": result[1] or 0.0,
+                "re_explain_rate": result[2] or 0.0,
+                "post_view_rate": result[3] or 0.0,
+                "pending_rate": result[4] or 0.0,
+                "revoke_rate": result[5] or 0.0,
+            },
+                "zone_counts": {
+                ComfortZone.CALM.value: int(result[6] or 0),
+                ComfortZone.OBSERVE.value: int(result[7] or 0),
+                ComfortZone.FOCUS.value: int(result[8] or 0),
+            },
+        }
+
+    def _summary_stmt(self):
+        return select(
+            func.count(MetricsSnapshot.id),
+            func.avg(MetricsSnapshot.clarify_request_rate),
+            func.avg(MetricsSnapshot.re_explain_rate),
+            func.avg(MetricsSnapshot.post_view_rate),
+            func.avg(MetricsSnapshot.pending_rate),
+            func.avg(MetricsSnapshot.revoke_rate),
+            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.CALM, 1), else_=0)),
+            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.OBSERVE, 1), else_=0)),
+            func.sum(case((MetricsSnapshot.comfort_zone == ComfortZone.FOCUS, 1), else_=0)),
+        )

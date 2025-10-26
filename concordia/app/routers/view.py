@@ -17,6 +17,7 @@ from ..domain.models import (
 from ..domain.schemas import (
     ClarifyRequestBody,
     RevisitRequestBody,
+    SignalEventIn,
     UnderstandingEventOut,
 )
 from ..domain.policy import PolicyContext
@@ -143,5 +144,38 @@ def post_revisit(
         actor_type=body.actor_type,
         act_type=ActType.RE_VIEW,
         payload={"note": body.note} if body.note else {},
+    )
+    return LedgerService(session).append(event)
+
+
+@router.post(
+    "/sessions/{session_id}/signals",
+    response_model=UnderstandingEventOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def post_signal(
+    session_id: str,
+    body: SignalEventIn,
+    session: Session = Depends(db_session),
+):
+    AccessEvaluator(session).enforce(
+        PolicyContext(subject_id=body.actor_id, role=body.actor_type.value),
+        action="send_signal",
+        resource=session_id,
+    )
+    signal_map = {
+        "ack": ActType.SIGNAL_ACK,
+        "question": ActType.SIGNAL_QUESTION,
+        "praise": ActType.SIGNAL_PRAISE,
+    }
+    act_type = signal_map.get(body.signal_type)
+    if not act_type:
+        raise HTTPException(status_code=400, detail="Invalid signal type")
+    event = UnderstandingEventCreate(
+        session_id=session_id,
+        actor_id=body.actor_id,
+        actor_type=body.actor_type,
+        act_type=act_type,
+        payload={"signal": body.signal_type},
     )
     return LedgerService(session).append(event)

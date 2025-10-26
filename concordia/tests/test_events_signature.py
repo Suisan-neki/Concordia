@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlmodel import Session, SQLModel, create_engine
 
 from concordia.app.domain.merkle import canonical_bytes
-from concordia.app.domain.models import ActorKey
+from concordia.app.domain.models import ActorKey, ActorType
 from concordia.app.domain.schemas import UnderstandingEventIn
 from concordia.app.domain.sign import generate_keypair, sign_message
 from concordia.app.routers.events import _verify_signature_input
