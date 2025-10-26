@@ -164,49 +164,6 @@ patient_data = {
 
 ---
 
-## 6. LLM 評価機能
-
-Concordia は LLM (Large Language Model) を使って理解の質を評価します。
-
-### 6.1 セットアップ
-
-**Gemini API を使用する場合:**
-
-```bash
-export GEMINI_API_KEY="your-api-key-here"
-```
-
-API キーが設定されていない場合、モック実装にフォールバックします（会話のターン数で判定）。
-
-### 6.2 使い方
-
-セッション終了後、Celery タスクが自動的に LLM 評価を実行します:
-
-```python
-from concordia.app.services.llm_assessment import LLMAssessmentService
-
-# 評価を実行
-assessment = LLMAssessmentService(session).assess_session(session_id)
-
-print(f"理解度: {assessment.overall_quality}")
-print(f"信頼度: {assessment.confidence_score}")
-print(f"判定理由: {assessment.reasoning}")
-print(f"懸念点: {assessment.concerns}")
-```
-
-### 6.3 評価結果
-
-- **HIGH**: 患者が十分に理解し、質問も活発で、双方向性が保たれている
-- **MODERATE**: 一部不明点あり、再説明で改善可能
-- **LOW**: 理解不足、構造的な再説明が必要
-
-### 6.4 カスタマイズ
-
-他の LLM API (OpenAI / Anthropic など) に変更したい場合は、
-`concordia/app/services/llm_assessment.py` の `_call_llm_api` メソッドを編集してください。
-
----
-
 ## 6. 機能仕様（Functional Specification）
 
 | 項目 | 説明 | 実装メモ |
@@ -320,3 +277,47 @@ print(f"懸念点: {assessment.concerns}")
 - ボタン入力は匿名集計し、そのまま Ledger にポジティブな理解行動として記録。誰かを指摘せずに空気感を可視化できる。
 - カンファレンス等の複数人場面でも、押された回数だけを指標化して話し手にフィードバック。押さなくてもよいが、押すと安心ログが増える。
 - UI を整える前は CLI でこの指標を出力し、テキストでシチュエーションを作りながら評価コメント（リフレーミング）を表示する計画。
+
+
+## 補足. LLM 評価機能
+
+Concordia は LLM (Large Language Model) を使って理解の質を評価します。
+
+### a.1 セットアップ
+
+**Gemini API を使用する場合:**
+
+```bash
+export GEMINI_API_KEY="your-api-key-here"
+```
+
+API キーが設定されていない場合、モック実装にフォールバックします（会話のターン数で判定）。
+
+### a.2 使い方
+
+セッション終了後、Celery タスクが自動的に LLM 評価を実行します:
+
+```python
+from concordia.app.services.llm_assessment import LLMAssessmentService
+
+# 評価を実行
+assessment = LLMAssessmentService(session).assess_session(session_id)
+
+print(f"理解度: {assessment.overall_quality}")
+print(f"信頼度: {assessment.confidence_score}")
+print(f"判定理由: {assessment.reasoning}")
+print(f"懸念点: {assessment.concerns}")
+```
+
+### a.3 評価結果
+
+- **HIGH**: 患者が十分に理解し、質問も活発で、双方向性が保たれている
+- **MODERATE**: 一部不明点あり、再説明で改善可能
+- **LOW**: 理解不足、構造的な再説明が必要
+
+### a.4 カスタマイズ
+
+他の LLM API (OpenAI / Anthropic など) に変更したい場合は、
+`concordia/app/services/llm_assessment.py` の `_call_llm_api` メソッドを編集してください。
+
+---
