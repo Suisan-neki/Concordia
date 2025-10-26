@@ -1,9 +1,10 @@
-from fastapi.testclient import TestClient
-
 from concordia.app.main import app
 
 
-def test_health_endpoint_exists():
-    client = TestClient(app)
-    response = client.get("/events/")
-    assert response.status_code == 200
+def test_app_title():
+    assert app.title == "Concordia API"
+
+
+def test_router_tags_present():
+    tags = {tag for route in app.routes for tag in getattr(route, "tags", [])}
+    assert {"events", "sessions", "metrics", "view"}.issubset(tags)

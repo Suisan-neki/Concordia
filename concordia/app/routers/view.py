@@ -1,7 +1,7 @@
 """Patient/physician view routes."""
 from typing import List
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
@@ -25,7 +25,13 @@ from ..services.ledger import LedgerService
 from ..services.telemetry import TelemetryService
 
 router = APIRouter()
-templates = Jinja2Templates(directory="concordia/app/templates")
+
+
+def _templates() -> Jinja2Templates:
+    try:
+        return Jinja2Templates(directory="concordia/app/templates")
+    except AssertionError as exc:
+        raise HTTPException(status_code=500, detail="Template engine not available") from exc
 
 
 @router.get(
@@ -73,7 +79,7 @@ def session_timeline_html(
         if events
         else None
     )
-    return templates.TemplateResponse(
+    return _templates().TemplateResponse(
         "timeline.html",
         {
             "request": request,

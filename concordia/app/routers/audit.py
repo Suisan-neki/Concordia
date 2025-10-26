@@ -1,7 +1,7 @@
 """Audit routes."""
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
@@ -10,7 +10,13 @@ from ..deps import db_session
 from ..domain.models import AccessLog, AccessLogRead, SignatureRecord, SignatureRecordRead
 
 router = APIRouter()
-templates = Jinja2Templates(directory="concordia/app/templates")
+
+
+def _templates() -> Jinja2Templates:
+    try:
+        return Jinja2Templates(directory="concordia/app/templates")
+    except AssertionError as exc:
+        raise HTTPException(status_code=500, detail="Template engine not available") from exc
 
 
 @router.get("/logs", response_model=List[AccessLogRead])
@@ -37,7 +43,7 @@ def audit_logs_html(
     session: Session = Depends(db_session),
 ):
     logs = audit_logs(actor_id=actor_id, action=action, session=session)
-    return templates.TemplateResponse(
+    return _templates().TemplateResponse(
         "audit_logs.html",
         {
             "request": request,
