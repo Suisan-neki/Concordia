@@ -176,3 +176,25 @@ class SignatureRecordRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SessionRecord(SQLModel, table=True):
+    __tablename__ = "sessions"
+
+    id: str = SQLField(primary_key=True, index=True)
+    doctor_id: str = SQLField(index=True)
+    title: str
+    artifact_hash: str
+    created_at: datetime = SQLField(default_factory=datetime.utcnow, nullable=False)
+    status: str = SQLField(default="active", index=True)
+
+
+class SessionRecordRead(BaseModel):
+    id: str
+    doctor_id: str
+    title: str
+    artifact_hash: str
+    created_at: datetime
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)

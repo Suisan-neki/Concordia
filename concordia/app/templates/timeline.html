@@ -21,7 +21,10 @@
 </head>
 <body>
   <header>
-    <h1>Session {{ session_id }}</h1>
+    <h1>{{ session_title }}</h1>
+    {% if artifact_hash %}
+    <p>Artifact SHA-256: <code>{{ artifact_hash }}</code></p>
+    {% endif %}
     {% if metrics %}
       <p>
         Comfort Zone:

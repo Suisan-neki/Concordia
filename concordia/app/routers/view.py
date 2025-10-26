@@ -7,7 +7,13 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from ..deps import db_session
-from ..domain.models import ActType, ActorType, UnderstandingEvent, UnderstandingEventCreate
+from ..domain.models import (
+    ActType,
+    ActorType,
+    SessionRecord,
+    UnderstandingEvent,
+    UnderstandingEventCreate,
+)
 from ..domain.schemas import (
     ClarifyRequestBody,
     RevisitRequestBody,
@@ -55,6 +61,7 @@ def session_timeline_html(
     viewer_id: str,
     session: Session = Depends(db_session),
 ):
+    session_record = session.get(SessionRecord, session_id)
     events = session_timeline(
         session_id=session_id,
         viewer_id=viewer_id,
@@ -71,6 +78,8 @@ def session_timeline_html(
         {
             "request": request,
             "session_id": session_id,
+            "session_title": session_record.title if session_record else session_id,
+            "artifact_hash": session_record.artifact_hash if session_record else "",
             "viewer_id": viewer_id,
             "events": events,
             "metrics": metrics,
