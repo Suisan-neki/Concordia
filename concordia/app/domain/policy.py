@@ -6,9 +6,7 @@ from typing import Optional
 @dataclass
 class PolicyContext:
     subject_id: str
-    role: str
-    purpose: str = "care"
-    sensitivity: str = "standard"
+    role: str  # "doctor" or "patient"
 
 
 def is_allowed(
@@ -16,14 +14,11 @@ def is_allowed(
     action: str,
     resource_owner: Optional[str] = None,
 ) -> bool:
-    """Very simple ABAC stub until full engine is integrated."""
-    if context.role == "admin":
-        return True
     if context.role == "doctor":
-        return context.purpose in {"care", "audit"}
+        return True
     if context.role == "patient":
         if action in {"submit_clarify", "revisit"}:
             return True
-        if action in {"view_timeline"}:
+        if action == "view_timeline":
             return resource_owner is None or resource_owner == context.subject_id
     return False

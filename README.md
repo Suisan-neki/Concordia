@@ -184,6 +184,7 @@ patient_data = {
    - 理解行動ごとに `prev_hash`／`curr_hash` を連結し Merkle Chain を構築。  
    - `verify-metrics` など CLI で再計算可能な canonical JSON を採用。  
    - チェーンルートは日次で immutability Store（今後は immudb）へスナップショット。
+   - `python scripts/verify_chain.py --session-id sess-1` で任意セッションの鎖を検証可能。
 
 3. **ABAC / Selective Visibility**  
    - `PolicyContext(subject_id, role, purpose)` で評価。  
