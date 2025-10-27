@@ -7,8 +7,46 @@ from typing import Any, Dict, Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON
+from sqlalchemy import JSON, Enum as SQLAlchemyEnum
+from sqlalchemy.types import TypeDecorator, String
 from sqlmodel import Column, Field as SQLField, SQLModel
+
+
+class EnumValueType(TypeDecorator):
+    """Ensures enum values are stored as lowercase strings in the database."""
+    impl = SQLAlchemyEnum
+    cache_ok = True
+
+    def __init__(self, enum_class, name, **kwargs):
+        self.enum_class = enum_class
+        self.enum_name = name
+        super().__init__(enum_class, name=name, **kwargs)
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        # Handle Enum instances
+        if hasattr(value, 'value'):
+            return str(value.value).lower()
+        # Handle string values
+        if isinstance(value, str):
+            return value.lower()
+        # Handle other types
+        return str(value).lower() if value else None
+
+    def process_result_value(self, value, dialect):
+        if not value:
+            return None
+        # If already an enum, return as is
+        if isinstance(value, self.enum_class):
+            return value
+        # Try to find enum member by value
+        value_str = str(value).lower()
+        for member in self.enum_class:
+            if member.value.lower() == value_str:
+                return member
+        # Fallback: return the value as-is if no match
+        return value
 
 
 class ActorType(str, Enum):
@@ -37,6 +75,13 @@ class ComfortZone(str, Enum):
     CALM = "calm"
     OBSERVE = "observe"
     FOCUS = "focus"
+
+
+class ComprehensionQuality(str, Enum):
+    """Understanding quality assessment by LLM."""
+    HIGH = "high"  # 十分に理解している
+    MODERATE = "moderate"  # 一部不明点あり、再説明が有効
+    LOW = "low"  # 理解不足、構造的な再説明が必要
 
 
 class UnderstandingEvent(SQLModel, table=True):
@@ -211,10 +256,10 @@ class ComprehensionAssessment(SQLModel, table=True):
     id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
     session_id: str = SQLField(index=True)
     overall_quality: ComprehensionQuality = SQLField(default=ComprehensionQuality.MODERATE)
-    confidence_score: float = SQLField(default=0.5)  # 0.0-1.0
-    reasoning: str = SQLField(default="")  # LLM の判定理由
-    concerns: str = SQLField(default="")  # 懸念点・改善提案
-    metadata: Dict[str, Any] = SQLField(
+    agreement_readiness: str = SQLField(default="")  # 「合意への準備度」を言葉で表現（数値化しない）
+    reasoning: str = SQLField(default="")  # LLM の判定理由（肯定的な表現で）
+    suggestions: str = SQLField(default="")  # より良い対話のための肯定的な提案
+    assessment_metadata: Dict[str, Any] = SQLField(
         sa_column=Column(JSON, nullable=False, server_default="{}")
     )  # プロンプト・モデル・バージョン等
     calculated_at: datetime = SQLField(default_factory=datetime.utcnow, nullable=False, index=True)
@@ -224,10 +269,10 @@ class ComprehensionAssessmentRead(BaseModel):
     id: str
     session_id: str
     overall_quality: ComprehensionQuality
-    confidence_score: float
+    agreement_readiness: str
     reasoning: str
-    concerns: str
-    metadata: Dict[str, Any]
+    suggestions: str
+    assessment_metadata: Dict[str, Any]
     calculated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

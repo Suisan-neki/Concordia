@@ -9,6 +9,8 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+psycopg://concordia:concordia@db:5432/concordia
+    env_file:
+      - .env
     depends_on:
       - db
       - redis

@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sessions", type=int, default=3)
     parser.add_argument(
         "--database-url",
-        default="postgresql+psycopg://concordia:concordia@localhost:5432/concordia",
+        default="postgresql+psycopg://concordia:concordia@db:5432/concordia",
     )
     return parser.parse_args()
 

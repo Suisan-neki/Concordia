@@ -18,6 +18,7 @@ dependencies = [
   "celery",
   "redis",
   "google-generativeai",
+  "python-dotenv",
 ]
 
 [project.optional-dependencies]

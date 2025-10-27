@@ -50,9 +50,10 @@ def ensure_acttype_enum_values(bind_engine: Optional[Engine] = None) -> None:
             if enum_value not in existing
         ]
         for enum_value in missing:
+            # Note: Can't use parameterized query with ADD VALUE IF NOT EXISTS
+            # PostgreSQL doesn't support placeholders in enum alterations
             conn.execute(
-                text("ALTER TYPE acttype ADD VALUE IF NOT EXISTS :value"),
-                {"value": enum_value},
+                text(f"ALTER TYPE acttype ADD VALUE IF NOT EXISTS '{enum_value}'")
             )
 
 

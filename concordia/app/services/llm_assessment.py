@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
+from dotenv import load_dotenv
 import google.generativeai as genai
 from sqlmodel import Session, select
 
@@ -17,6 +18,9 @@ from ..domain.models import (
     ActType,
 )
 
+# .env ファイルをロード
+load_dotenv()
+
 
 class LLMAssessmentService:
     """Assess comprehension quality using LLM-based analysis."""
@@ -27,7 +31,7 @@ class LLMAssessmentService:
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
             genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
     def assess_session(self, session_id: str) -> ComprehensionAssessment:
         """Evaluate comprehension quality for a completed session."""
@@ -46,10 +50,10 @@ class LLMAssessmentService:
         assessment = ComprehensionAssessment(
             session_id=session_id,
             overall_quality=result["quality"],
-            confidence_score=result["confidence"],
+            agreement_readiness=result["agreement_readiness"],
             reasoning=result["reasoning"],
-            concerns=result["concerns"],
-            metadata=result["metadata"],
+            suggestions=result["suggestions"],
+            assessment_metadata=result["metadata"],
         )
         self.session.add(assessment)
         self.session.flush()
@@ -95,12 +99,17 @@ class LLMAssessmentService:
 - MODERATE: 一部不明点あり、再説明で改善可能
 - LOW: 理解不足、構造的な再説明が必要
 
-JSON形式で返答してください:
+【重要な原則】
+- 誰を責めるのではなく、対話の質を客観的に評価してください
+- 「改善が必要」ではなく「さらに深い理解の機会がある」という肯定的な表現を使用してください
+- 問題点を指摘するのではなく、より良い対話のためのヒントを提供してください
+
+JSON形式で返答してください（すべて肯定的な表現で）:
 {{
   "quality": "high|moderate|low",
-  "confidence": 0.0-1.0,
-  "reasoning": "判定理由",
-  "concerns": "懸念点（なければ空文字列）"
+  "agreement_readiness": "合意への準備度を肯定的な言葉で表現（例: '十分な情報交換ができている'）",
+  "reasoning": "判定理由（肯定的な表現で）",
+  "suggestions": "さらに良い対話のための提案（なければ空文字列）"
 }}
 """
             
@@ -125,11 +134,11 @@ JSON形式で返答してください:
             
             return {
                 "quality": quality_map.get(result["quality"], ComprehensionQuality.MODERATE),
-                "confidence": float(result.get("confidence", 0.5)),
+                "agreement_readiness": result.get("agreement_readiness", "対話を通じて理解が深まっている"),
                 "reasoning": result.get("reasoning", ""),
-                "concerns": result.get("concerns", ""),
+                "suggestions": result.get("suggestions", ""),
                 "metadata": {
-                    "model": "gemini-pro",
+                    "model": "gemini-2.0-flash-exp",
                     "api_provider": "google",
                     "timestamp": datetime.utcnow().isoformat(),
                 },
@@ -141,33 +150,33 @@ JSON形式で返答してください:
             return self._mock_assessment(conversation)
 
     def _mock_assessment(self, conversation: str) -> dict:
-        """モック実装: 会話のターン数で判定"""
+        """モック実装: 会話のターン数で判定（すべて肯定的な表現で）"""
         lines = conversation.count("\n")
         
         if lines > 10:
             quality = ComprehensionQuality.HIGH
-            confidence = 0.8
+            agreement_readiness = "十分な情報交換ができており、合意に近づいています"
             reasoning = f"会話に{lines}ターンあり、双方向性が十分に見られます。"
-            concerns = ""
+            suggestions = ""
         elif lines > 5:
             quality = ComprehensionQuality.MODERATE
-            confidence = 0.6
-            reasoning = f"会話に{lines}ターンあり、やや不足があります。"
-            concerns = "患者の反応が少ない可能性があります。"
+            agreement_readiness = "さらなる質問の機会を活用することで、より深い理解につなげられます"
+            reasoning = f"会話に{lines}ターンあり、対話の流れは良好です。"
+            suggestions = "追加の質問があれば遠慮なくどうぞ。"
         else:
             quality = ComprehensionQuality.LOW
-            confidence = 0.5
-            reasoning = f"会話が短く（{lines}ターン）、理解が不十分な可能性があります。"
-            concerns = "構造的な再説明が必要です。"
+            agreement_readiness = "対話を続けることで、より良い理解につなげられます"
+            reasoning = f"会話は{lines}ターン。双方向のやり取りを続けることで理解が深まります。"
+            suggestions = "不明な点があれば、いつでも質問してください。"
         
         return {
             "quality": quality,
-            "confidence": confidence,
+            "agreement_readiness": agreement_readiness,
             "reasoning": reasoning,
-            "concerns": concerns,
+            "suggestions": suggestions,
             "metadata": {
                 "model": "mock-v1",
-                "prompt_version": "1.0",
+                "prompt_version": "2.0-positive-only",
                 "timestamp": datetime.utcnow().isoformat(),
             },
         }
