@@ -1,352 +1,157 @@
-# ゼロプレッシャー合意における高度なセキュリティ技術
+# 尖った技術カタログ（意図と便益を丁寧に）
 
-## 概要
+この文書は「なぜその技術が必要か」「誰にどう嬉しいか」「何を最初に作るか」を、院内ステークホルダーにも伝わる言葉でまとめ直したものです。UIやABACは最小限にし、暗号・鎖・時刻・秘匿集計といった“裏側の信頼”を主役に据えます。
 
-**個人実装だからこその強み**  
-本プロジェクトは個人開発のため、大規模運用の制約がない。  
-従来の「署名」のような古典的な技術ではなく、**ニッチで先進的な技術**を試せる場として活用する。
-
-> **技術選定の方針**  
-> ✅ コスト効率よりも**技術的好奇心**を優先  
-> ✅ 実用性よりも**実験的価値**を追求  
-> ✅ 過剰な技術も含めて**試してみる価値がある**
+- ゴール: 説明→再確認→再説明→合意/保留→再閲覧の一連の行動を、改ざん不能かつ“圧力ゼロ”で可視化する。
+- 優先: ①鎖の完全性 ②署名/時刻の裏付け ③秘匿集計によるテレメトリ。
+- 省略: リッチなUIや重厚なABACは後回し。閲覧は最小限、権限は軽量トークンで代替。
 
 ---
 
-## 現状の実装（従来技術）
+## 1) Ledger + Merkle を強化する（BLAKE3／MMR／外部アンカー）
 
-### Ed25519 署名 + TSA トークン ✅ 実装済み
+目的
+- “記録が動かない”ことを技術で示し、疑いと不安を下げる。
 
-```python
-# concoridia/app/domain/sign.py
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+何をする
+- ハッシュ方式を二重化: 既存の SHA‑256 に加え BLAKE3 を併記（将来互換を確保）。
+- 形を最適化: 追記に強い Merkle Mountain Range(MMR)で日次ルートを作る。
+- 外部アンカー: 日次ルートを OpenTimestamps 等に時刻アンカー（オフライン時はキュー）。
 
-def generate_keypair() -> Tuple[bytes, bytes]:
-    private_key = Ed25519PrivateKey.generate()
-    public_key = private_key.public_key()
-    return (private_key.private_bytes(...), public_key.public_bytes(...))
-```
+どう嬉しいか
+- 医師: 「あとでログを改ざんしたのでは？」という疑いを受けにくくなる（脅威1）。
+- 患者: 自分の選択が後から書き換えられない安心（脅威2・3）。
 
-**なぜ置き換えるか？**
-- Ed25519は「確立された技術」
-- 個人実装なら、もっと**面白い技術**を試せる
-- 「薄っぺらくない」技術を実装してみたい
+実装イメージ
+- カノニカルJSON（キー順固定/UTC/小数秒）。signature と curr_hash はハッシュ対象外。
+- CLI を用意: `verify-session`（再計算検証）、`anchor-day`（日次ルート作成とアンカー）。
 
----
-
-## 1. ゼロ知識証明（Zero-Knowledge Proofs）⭐ 最優先実装
-
-### なぜ実装すべきか
-
-従来の署名技術では：
-```
-患者: 「手術のリスクを理解しました」→ [署名]
-医師: 署名を確認（内容も見える）
-```
-
-問題：
-- 医師が患者の「同意内容」を見てしまう
-- 患者は「本当の気持ち」を言えない
-- 署名という「記録」が圧力になる
-
-### ゼロ知識証明なら
-
-```
-患者: 「手術のリスクを理解した」という「証明」を生成
-医師: 証明の「真偽」のみを検証（内容は見えない）
-```
-
-**実装例:**
-```python
-# 患者が「理解した」という証明を生成（内容は隠す）
-zk_proof = generate_zk_proof(
-    statement="手術のリスクを理解した",
-    secret="具体的な不安や質問内容",
-    private_key=patient_key
-)
-
-# 医師は証明の有効性のみを検証
-is_valid = verify_zk_proof(zk_proof)
-# True → 患者は理解している（内容は不明）
-```
-
-### 実装方針
-
-1. **Circom + SnarkJS** で回路を定義
-2. **Bellman** (Rust) / **Arkworks** (Rust) で実装
-3. Python のバインディングを通じて呼び出し
-
-### メリット
-- ✅ **プライバシー保護**: 内容を一切明かさない
-- ✅ **圧力の軽減**: 「何を理解したか」を公開する必要がない
-- ✅ **技術的挑戦**: 個人実装で学べる機会
-
-### デメリット
-- ⚠️ 計算コストが高い（数秒〜数分）
-- ⚠️ 実装が複雑（しかし挑戦する価値がある）
-
-### 技術スタック
-```bash
-# 必要なツール
-sudo npm install -g circom snarkjs
-pip install python-snark
-```
+注意点
+- 仕様（ハッシュ順序・対象）を文書に固定。将来変更は並行運用で移行。
 
 ---
 
-## 2. 差分プライバシー（Differential Privacy）⭐ 併行実装
+## 2) 署名と時刻の裏付け（Roughtime／二重署名／FROSTは将来）
 
-### なぜ実装すべきか
+目的
+- 「誰が・いつ・どの操作を選んだか」を機械的に裏付け、強制の疑念を減らす。
 
-従来の統計公開では：
-```
-「患者100人中80人が同意しました」
-→ 個人を特定できる可能性がある
-```
+何をする
+- 時刻証明を軽量化: Roughtime や OpenTimestamps を採用（RFC3161に縛られない）。
+- 体験を先に再現: 医師端末署名 + サーバ署名を併記し、2‑of‑2 的な性質をデモ。
+- 将来の拡張: 本格的な閾値署名（FROST）は後段で検討（まずはスタブ設計）。
 
-問題：
-- 統計から個人の回答を推測できる
-- GDPR/HIPAA に準拠できない
+どう嬉しいか
+- 医師: 「サーバが勝手に押したのでは？」という疑念を避けやすい（脅威1・4）。
+- 患者: 「自分がこの時に選んだ」事実が時刻と共に残る（脅威2）。
 
-### 差分プライバシーなら
-
-```
-「患者100人中80人が同意しました (±3%)」
-→ 個人を特定することは不可能
-```
-
-### 実装方針
-
-```python
-# concordia/app/services/differential_privacy.py
-import numpy as np
-
-def laplace_mechanism(data: list[bool], epsilon: float = 1.0):
-    """ラプラスノイズを加えて差分プライバシーを実現"""
-    true_count = sum(data)
-    sensitivity = 1  # 個人1人の影響
-    scale = sensitivity / epsilon
-    
-    # ラプラスノイズを加える
-    noisy_count = true_count + np.random.laplace(0, scale)
-    
-    return {
-        "count": int(noisy_count),
-        "confidence": f"±{int(scale * 3)}",
-        "privacy": epsilon
-    }
-```
-
-### 使用例
-
-```python
-# 統計を公開したいが、個人情報は保護したい
-agreements = [True, True, False, True, False, ...]  # 100人の回答
-
-# 差分プライバシーを適用
-private_stats = laplace_mechanism(agreements, epsilon=1.0)
-
-print(f"{private_stats['count']}% の患者が同意しました ({private_stats['confidence']})")
-# "77% の患者が同意しました (±3)"
-# → この統計から個人を特定することは不可能
-```
-
-### 技術スタック
-```bash
-pip install numpy scipy diffprivlib
-```
+実装イメージ
+- 署名対象ダイジェスト: イベント本体 + `prev_hash`（順序を仕様化）。
+- 失敗は明示的に拒否。鍵はPoCではファイル/DB、後でHSMへ移行可能に。
 
 ---
 
-## 3. ブラインド署名（Blind Signatures）⭐ ニッチ技術
+## 3) Telemetry を“責めない数字”に（2サーバ秘匿集計／DP／ZPI）
 
-### なぜ実装すべきか
+目的
+- 指標がプレッシャーにならないよう、個票を見せず“集計だけ”を安全に扱う。
 
-従来の署名では：
-```
-患者: 「手術に同意します」→ [Ed25519署名]
-医師: 署名を確認（内容も見える）
-```
+何をする
+- 2サーバの加法秘密分散でカウントを合成し、合計だけ復元（個人は不可視）。
+- 差分プライバシ（DP）で微小ノイズを加え、再識別を防止（設定でON/OFF）。
+- Zero Pressure Index(ZPI) をルールベースで算出（LLMなしで成立）。
 
-### ブラインド署名なら
+どう嬉しいか
+- 医師: 「数字で責められている感」を避けられる（脅威4）。
+- 患者: 質問行動が個人に紐づかず安心（脅威2・3）。
 
-```
-患者: 内容を「盲目化」して署名を取得
-医師: 署名の有効性のみを確認（内容は見えない）
-```
-
-### 実装方針
-
-```python
-# concordia/app/domain/blind_signature.py
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-import hashlib
-
-def blind_message(message: bytes, public_key) -> bytes:
-    """メッセージを盲目化"""
-    # ランダムなブラインドファクターを生成
-    blind_factor = secrets.token_bytes(32)
-    
-    # メッセージをハッシュ化
-    message_hash = hashlib.sha256(message).digest()
-    
-    # ブラインド化
-    blinded = (message_hash, blind_factor, public_key)
-    return blinded
-
-def sign_blinded(blinded: bytes, private_key) -> bytes:
-    """盲目化されたメッセージに署名"""
-    signature = private_key.sign(
-        blinded,
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
-        ),
-        hashes.SHA256()
-    )
-    return signature
-
-def unblind_signature(blinded_signature: bytes, blind_factor: bytes) -> bytes:
-    """署名を脱盲"""
-    # ブラインドファクターを取り除く
-    unblinded = blinded_signature
-    return unblinded
-```
-
-### メリット
-- ✅ **内容の秘匿性**: 医師は患者の合意内容を見ることができない
-- ✅ **署名の有効性**: Ed25519と同等のセキュリティ
-- ✅ **ニッチな技術**: 実装例が少ない
+実装イメージ
+- 特徴量: clarify / re_explain / re_view / 合意までの時間間隔 / シグナル多様性 / 主導度。
+- 重み・閾値は設定ファイルで調整可能（`.env`/`pyproject.toml`）。
 
 ---
 
-## 4. トップレシークレットシェアリング（Top-Secret Sharing）
+## 4) 権限は“軽く確実に”（Macaroons）。ABACは当面スキップ
 
-### なぜ実装すべきか
+目的
+- 「見せすぎない透明性」を軽量に実現し、運用コストを上げない。
 
-複数の利害関係者（患者・医師・家族）が関与する場合：
+何をする
+- Macaroons のケイブアット（条件）で `purpose=care`, `ttl`, `scope=session` を付与。
+- ロールは doctor/patient の2つに限定。監査・教育は将来オプション。
 
-```
-【従来の方法】
-患者: 「手術に同意します」
-医師: 「説明を完了しました」
-家族: 「家族として同意します」
-→ 全ての回答が全員に見える（プライバシーリスク）
+どう嬉しいか
+- 医師: 必要な相手だけに閲覧を渡せる（脅威3）。
+- 患者: 最小開示で安心、期限も明確。
 
-【シークレットシェアリング】
-患者・医師・家族がそれぞれ「秘密」を分散
-→ 合意の結果のみが明らか（各参加者の回答は不明）
-```
-
-### 実装方針
-
-```python
-# concordia/app/domain/secret_sharing.py
-from secretsharing import secret_int_to_points, points_to_secret_int
-
-def split_secret(secret: str, num_shares: int, threshold: int):
-    """秘密を分散"""
-    secret_int = int.from_bytes(secret.encode(), 'big')
-    shares = secret_int_to_points(secret_int, threshold, num_shares)
-    return shares
-
-def reconstruct_secret(shares: list):
-    """分散された秘密から復元"""
-    secret_int = points_to_secret_int(shares)
-    secret_bytes = secret_int.to_bytes((secret_int.bit_length() + 7) // 8, 'big')
-    return secret_bytes.decode()
-
-# 使用例
-patient_secret = "手術に同意します"
-doctor_secret = "説明を完了しました"
-family_secret = "家族として同意します"
-
-# 各参加者が秘密を分散
-patient_shares = split_secret(patient_secret, num_shares=3, threshold=2)
-doctor_shares = split_secret(doctor_secret, num_shares=3, threshold=2)
-family_shares = split_secret(family_secret, num_shares=3, threshold=2)
-
-# 合意を計算（秘密は復元しない）
-# → 各参加者の回答は不明だが、合意の結果は分かる
-```
-
-### 技術スタック
-```bash
-pip install secretsharing
-```
+実装イメージ
+- 失効/スコープ検証を共通ユーティリティに集約。ZCAP‑LD 等は研究枠に。
 
 ---
 
-## 推奨される技術選択（個人実装向け）
+## 5) 検証が主役の最小UI（とCLI）
 
-### 最優先実装 ⭐⭐⭐
+目的
+- “裏側の信頼”をそのまま見せる。UIは少なく、検証を前面に。
 
-1. **ゼロ知識証明（ZK-SNARKs）** 
-   - 理由: 最も革新的で、個人実装で学ぶ価値が高い
-   - 難易度: 高
-   - ツール: Circom + SnarkJS
+何をする
+- 画面は患者タイムラインと医師集計のみ。チェーン検証やアンカー状態をピル表示。
+- CLI（`dialog_cli`/`doctor_summary`）でいつでも同じ情報を確認可能。
 
-2. **差分プライバシー**
-   - 理由: 実装が比較的簡単で、すぐに価値を提供できる
-   - 難易度: 中
-   - ツール: `diffprivlib`, NumPy
+どう嬉しいか
+- 医師: 複雑UIに時間を取られず、肝心の信頼状態だけを即確認。
+- 患者: 比較やランキングがなく、数字に追われない（脅威4）。
 
-3. **ブラインド署名**
-   - 理由: ニッチな技術だが、実装例が少ない
-   - 難易度: 中
-   - ツール: `cryptography`
-
-### 将来的に検討 🔄
-
-- **マルチパーティ計算（MPC）**: 複数ステークホルダー対応が必要な場合
-- **完全準同型暗号（FHE）**: 計算コストが高すぎる（しかし挑戦する価値はある）
+実装イメージ
+- UIは増やさない方針。検証と状態表示に絞る。
 
 ---
 
-## 実装ロードマップ
+## 技術→便益→内在的脅威の対応
 
-### Phase 1: 差分プライバシー（1-2週間）
-```bash
-# 実装ファイル
-concordia/app/services/differential_privacy.py
-concordia/tests/test_differential_privacy.py
-```
-
-### Phase 2: ブラインド署名（2-3週間）
-```bash
-# 実装ファイル
-concordia/app/domain/blind_signature.py
-concordia/tests/test_blind_signature.py
-```
-
-### Phase 3: ゼロ知識証明（3-4週間）
-```bash
-# 実装ファイル
-circuits/understanding_proof.circom
-concordia/app/services/zk_proof.py
-concordia/tests/test_zk_proof.py
-```
-
-### Phase 4: シークレットシェアリング（1-2週間）
-```bash
-# 実装ファイル
-concordia/app/domain/secret_sharing.py
-concordia/tests/test_secret_sharing.py
-```
+- 二重ハッシュ+MMR+アンカー → 「記録は動かない」 → 疑われる恐れ/切り取り拡散（脅威1,3）
+- Roughtime+二重署名 → 「押させられていない」 → 強制/時刻疑義（脅威1,2,4）
+- 2サーバ集計+DP → 「誰も責められない」 → 数値が圧力になる（脅威4）
+- Macaroons → 「見せすぎない透明性」 → 過剰監視（脅威3）
+- 最小UI/CLI → 「比較を煽らない」 → 可視化が圧力化（脅威4）
 
 ---
 
-## まとめ
+## 実装順（現実的なロードマップ）
 
-**個人実装だからこそできること**
+1. Ledger拡張: BLAKE3併記・MMR日次ルート・`anchor-day`/`verify-session` CLI
+2. 署名/時刻: Roughtimeスタブ・2署名併記（FROSTは後段）
+3. Telemetry: ZPI実装・2サーバ加法分散・DPノイズ（フラグ）
+4. 権限: Macaroons閲覧トークン（2ロール固定）
+5. 最小UI: 検証ピル/状態表示、CLI整備
 
-1. **ニッチな技術**を試せる
-2. **コスト効率**よりも**技術的好奇心**を優先
-3. **実用性**よりも**実験的価値**を追求
-4. **過剰な技術**も含めて**試してみる価値がある**
+各ステップは「医師/患者にとって何が安心になるか」を説明文とともにデモ可能にする。
 
-Ed25519 のような「確立された技術」ではなく、**もっと面白い技術**を実装してみる。
+---
 
-これが個人実装の醍醐味である。
+## 電子カルテ（EHR）と Concordia の役割分担、そして“改訂”の考え方
+
+結論から言うと、Concordia は電子カルテの置き換えではありません。目的は「説明・理解・合意に関する行動の透明化」であり、診療記録（所見・処方・検査結果）そのものは既存のEHRの責務です。
+
+1) 役割分担
+- EHR（電子カルテ）: 医療行為の事実（所見、診断、処方、指示）、法的記録。編集は院内規程に従う。
+- Concordia: 対話の軌跡（present/clarify/re_explain/agree/review など）と、その完全性検証（チェーン/署名/時刻）。
+
+2) 改訂は“追記”で扱う（書き換え≠悪ではないが、痕跡は残す）
+- 追加・補足は `ANNOTATE`（追記）として、対象イベントIDと差分を記録。
+- 誤りの訂正は `AMEND`、重大な意義がある場合は双方署名を推奨。
+- 効力を否認する場合は `RETRACT`（履歴は残す）。
+- 個人情報を将来不可読にしたいケースは `FORGET`（暗号封筒＋鍵破棄＝クリプトシュレッディングの方針）。
+- いずれも「元を消す」のでなく「後から来たイベント」で上書きの意味合いを表現し、チェーンに連結する。
+
+3) 現場の“その場完結”運用
+- 多くのセッションは当日で完結する想定。再閲覧は既定OFF、要望時に有効化。
+- 合意後は要点サマリ（要約とハッシュ）のみ発行。詳細ログは院内に保管。
+- Telemetry は当日の行動中心（clarify率、説明→合意までの時間、シグナル多様性）で評価し、数値ではなく穏やかなメッセージで返す。
+
+4) これがなぜ“内在的脅威”を和らげるか
+- 医師: 「間違えたら終わり」ではなく、後から追記/訂正できる前提で臨める（脅威1・4）。
+- 患者: その場で完結しても、必要時に再確認や追記ができる“選択肢”が担保される（脅威2）。
+- 監査: 改訂も追記として鎖に残るため、透明性は維持される（脅威3）。
+
+注: 上記の `ANNOTATE/AMEND/RETRACT/FORGET` は将来の ActType 拡張候補です。導入時は署名要否と表示の合成ルール（実効ビュー）を合わせて仕様化します。
