@@ -5,6 +5,49 @@
 ### ― 圧力のない説明と理解のための院内情報共有基盤 ―  
 ---
 
+## 付録: リポジトリ構成（Two-Lane）
+
+本リポジトリは、汎用ツールと医療アプリの二本立てで運用します。
+
+- 汎用レイヤー（Generic）: `concordia/`
+  - 合意・説明・理解の“痕跡”を耐改ざんで記録・検証する最小ライブラリ。
+  - ドメイン非依存。医療以外のシナリオでも再利用可能。
+
+- 医療レイヤー（Medical）: `SecHack365_project/`
+  - 診察室で患者と電子カルテを安全に共閲するアプリケーション。
+  - 必要に応じて Concordia の `SessionCapsule` を呼び出し、セッション証跡を自動生成。
+
+詳しくは `docs/ARCHITECTURE_TWO_LANES.md` と `docs/CONSENT_PHILOSOPHY.md` を参照してください。
+
+あわせて、汎用レイヤーの“公開URLで共有できる最小プレイグラウンド”として Consent Lab を用意しています。
+- 起動とルール: `docs/CONSENT_LAB.md`
+
+## ローカル起動（Docker不要）
+
+最速で試す場合、SQLite フォールバックで API を立てられます。
+
+1) 仮想環境と依存のセットアップ
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -e .
+```
+
+2) アプリ起動（SQLite）
+
+```bash
+export DATABASE_URL=sqlite:///./concordia.db  # Windows: set DATABASE_URL=sqlite:///./concordia.db
+uvicorn concordia.app.main:app --reload
+```
+
+3) ブラウザでアクセス
+
+- Consent Lab: http://localhost:8000/lab
+
+PostgreSQL を使う場合は `DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname` を指定してください。
+
+
 ## 0. 概要（Abstract）
 
 **Concordia** は、医療現場における「説明と理解」のプロセスを、  
