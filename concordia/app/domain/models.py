@@ -69,6 +69,8 @@ class ActType(str, Enum):
     SIGNAL_ACK = "signal_ack"  # 「伝わっています」
     SIGNAL_QUESTION = "signal_question"  # 「質問したい！」
     SIGNAL_PRAISE = "signal_praise"  # 「今の説明はいいね！」
+    MITIGATE = "mitigate"  # セキュリティ技術を当てて脅威を和らげる
+    MITIGATE_REMOVE = "mitigate_remove"  # 適用を外す（UI整合用）
 
 
 class ComfortZone(str, Enum):

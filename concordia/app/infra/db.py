@@ -1,5 +1,6 @@
 """Database session utilities."""
 from contextlib import contextmanager
+import os
 from typing import Iterator, List, Optional
 
 from sqlalchemy import create_engine, text
@@ -8,10 +9,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, Session
 
 from ..domain.models import ActType
+import time
 
-DATABASE_URL = "postgresql+psycopg://concordia:concordia@db:5432/concordia"
+# Read DATABASE_URL from environment; fall back to local SQLite for no‑Docker demo
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./concordia.db")
 
-engine = create_engine(DATABASE_URL, echo=False, future=True)
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, echo=False, future=True, connect_args=connect_args)
 SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
@@ -58,9 +62,24 @@ def ensure_acttype_enum_values(bind_engine: Optional[Engine] = None) -> None:
 
 
 def init_db() -> None:
-    """Create tables if they do not exist and keep enums in sync."""
-    SQLModel.metadata.create_all(engine)
-    ensure_acttype_enum_values(engine)
+    """Create tables if they do not exist and keep enums in sync.
+
+    Retries on startup to wait for the database service in Docker.
+    """
+    attempts = 0
+    last_err: Exception | None = None
+    while attempts < 30:
+        try:
+            SQLModel.metadata.create_all(engine)
+            ensure_acttype_enum_values(engine)
+            return
+        except Exception as exc:  # pragma: no cover
+            last_err = exc
+            attempts += 1
+            print(f"[init_db] waiting for database... ({attempts}/30) {exc}")
+            time.sleep(1)
+    if last_err:
+        raise last_err
 
 
 @contextmanager

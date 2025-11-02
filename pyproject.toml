@@ -10,6 +10,7 @@ dependencies = [
   "uvicorn[standard]",
   "httpx",
   "jinja2",
+  "python-multipart",
   "pydantic>=2.6",
   "sqlalchemy>=2.0",
   "sqlmodel>=0.0.18",

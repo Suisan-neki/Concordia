@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>Consent Story - {{ title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --bg:#0b1220; --panel:rgba(255,255,255,.06); --panel-b:#243244; --text:#e5e7eb; --muted:#93a4bd; --brand:#7c3aed; --brand-2:#06b6d4; --accent:#10b981; }
+    *{ box-sizing:border-box }
+    body{ margin:0; padding:0; min-height:100vh; color:var(--text); background:
+      radial-gradient(1200px 600px at 0% -10%, rgba(124,58,237,.22), transparent 50%),
+      radial-gradient(800px 400px at 120% 10%, rgba(6,182,212,.22), transparent 40%),
+      linear-gradient(180deg, #09101a, #0b1220 40%);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+    .container{ max-width: 920px; margin: 0 auto; padding: 2rem 1.25rem; }
+    .header{ margin-bottom: 1.2rem; }
+    .title{ display:flex; align-items:center; gap:.6rem; margin:0 0 .3rem 0; font-size:1.6rem; }
+    .meta{ color:var(--muted) }
+    .progress{ position:relative; height:10px; border-radius:999px; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); overflow:hidden; margin:.8rem 0 1.2rem; }
+    .progress > span{ position:absolute; inset:0 auto 0 0; width:0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); box-shadow: 0 10px 20px rgba(124,58,237,.25); }
+    .panel{ border:1px solid rgba(255,255,255,.12); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); backdrop-filter: blur(8px); border-radius: 14px; padding: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .narration{ display:flex; gap:.8rem; align-items:flex-start; }
+    .bubble{ background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); padding:.75rem .9rem; border-radius:12px; line-height:1.6 }
+    .avatar{ width:34px; height:34px; border-radius:999px; display:flex; align-items:center; justify-content:center; background: rgba(124,58,237,.2); border:1px solid rgba(124,58,237,.35) }
+    .controls{ display:flex; gap:.6rem; margin-top:.8rem }
+    .btn{ appearance:none; border:none; cursor:pointer; color:white; font-weight:600; border-radius:10px; padding:.55rem .9rem; text-decoration:none; display:inline-block }
+    .btn-primary{ background: linear-gradient(90deg, var(--brand), var(--brand-2)); box-shadow: 0 10px 20px rgba(124,58,237,.25); }
+    .btn-ghost{ background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:#dbeafe }
+    .grid{ display:flex; gap:1rem; align-items:flex-start; margin-top:1rem }
+    .cards{ flex:1 }
+    .slots{ flex:1 }
+    .card{ display:inline-block; margin:.35rem .35rem 0 0; padding:.5rem .65rem; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:10px; cursor:grab; transition: transform .1s ease }
+    .card:active{ transform: scale(.98) }
+    .slot{ border:2px dashed rgba(255,255,255,.2); border-radius:12px; padding:.65rem; min-height:84px; background: rgba(255,255,255,.03); transition: background .15s ease, border-color .15s ease }
+    .slot.hover{ background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.5) }
+    .applied span{ border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:.15rem .5rem; margin:.2rem .25rem 0 0; display:inline-block; background: rgba(255,255,255,.06) }
+    .toast{ position:fixed; right:16px; bottom:16px; background: rgba(16,185,129,.15); color:#d1fae5; border:1px solid rgba(16,185,129,.35); padding:.6rem .8rem; border-radius:10px; opacity:0; transform: translateY(10px); transition: all .2s ease }
+    .toast.show{ opacity:1; transform: translateY(0) }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">📖 {{ title }}</h1>
+      <div class="meta">{{ context }}</div>
+      <div class="progress"><span id="bar" style="width: {{ (100 * (step_index + (step_total>0 and 1 or 0)) // (step_total if step_total>0 else 1)) }}%"></span></div>
+    </div>
+
+    <section class="panel">
+      <div class="narration">
+        <div class="avatar" title="相手の発言">🗣️</div>
+        <div>
+          <div class="meta" style="margin:0 0 .25rem 0;">相手の発言</div>
+          <div class="bubble">{{ narration }}</div>
+          {% if hint %}
+          <div class="meta" style="margin-top:.35rem">ヒント: {{ hint }}</div>
+          {% endif %}
+        </div>
+      </div>
+      <form class="controls" method="post" action="/lab/story/{{ session_id }}/advance">
+        <input type="hidden" name="scenario" value="{{ scenario_id }}" />
+        <input type="hidden" name="i" value="{{ step_index }}" />
+        <input type="hidden" name="initiator" value="{{ initiator }}" />
+        <input type="hidden" name="responder" value="{{ responder }}" />
+        {% if step_index < step_total %}
+        <a class="btn btn-ghost" href="/lab/story/{{ session_id }}?scenario={{ scenario_id }}&i=0">最初へ</a>
+        {% if step_index > 0 %}
+        <a class="btn btn-ghost" href="/lab/story/{{ session_id }}?scenario={{ scenario_id }}&i={{ step_index - 1 }}">1つ前へ</a>
+        {% endif %}
+        <button class="btn btn-primary" type="submit">次へ</button>
+        {% else %}
+        {% if persist %}
+          <a class="btn btn-primary" href="/view/sessions/{{ session_id }}/timeline/html?viewer_id={{ responder }}">📜 Timeline を開く</a>
+        {% endif %}
+        <a class="btn btn-ghost" href="/lab">← シナリオ一覧へ</a>
+        {% endif %}
+      </form>
+    </section>
+
+    <section class="panel" style="margin-top:1rem;">
+      <h3>内在的脅威に“技術カード”を当ててみる（任意）</h3>
+      <div class="grid" data-pair-card="{{ pair_card_id or '' }}" data-pair-threat="{{ pair_threat_id or '' }}" data-pair-reason="{{ pair_reason or '' }}">
+        <div class="cards">
+          <div class="meta" style="margin-bottom:.35rem">この場面で使えそうな工夫</div>
+          <div id="cards">
+            {% for c in cards %}
+            <div class="card" draggable="true" data-card-id="{{ c.id }}" data-card-label="{{ c.label }}" data-card-explain="{{ c.explain }}" title="{{ c.effect }}">{{ c.label }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="slots">
+          <div class="meta" style="margin-bottom:.35rem">この発言の“どこが不安か”</div>
+          <div id="threats" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:.7rem;">
+            {% for t in threats %}
+            <div class="slot" data-threat-id="{{ t.id }}" data-threat-explain="{{ t.explain }}">
+              <div style="font-weight:600; margin-bottom:.25rem">{{ t.label }}</div>
+              <div class="meta">{{ t.desc }}</div>
+              <div class="applied" style="margin-top:.35rem"></div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast">記録しました</div>
+  <!-- Explain modal -->
+  <div id="modal" style="position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:1000;">
+    <div style="max-width:720px; width:92%; background:#0f172a; border:1px solid #334155; border-radius:14px; padding:1rem 1.1rem; color:#e5e7eb; box-shadow:0 20px 60px rgba(0,0,0,.5);">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; margin-bottom:.5rem;">
+        <h3 id="modal-title" style="margin:0; font-size:1.15rem;">この場面の整理</h3>
+        <button id="modal-close" class="btn btn-ghost" type="button">閉じる</button>
+      </div>
+      <div id="modal-body" class="meta" style="white-space:pre-wrap; line-height:1.8; font-size:1.02rem"></div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const sid = {{ session_id|tojson }};
+      const actor = {{ responder|tojson }};
+      const toast = document.getElementById('toast');
+      function notify(){ toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1200); }
+      const modal = document.getElementById('modal');
+      const modalBody = document.getElementById('modal-body');
+      const modalTitle = document.getElementById('modal-title');
+      document.getElementById('modal-close').addEventListener('click', ()=> modal.style.display='none');
+      modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.style.display='none'; });
+      document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') modal.style.display='none'; });
+      function sanitize(s){ return (s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+      function explain(card, threat, pairReason){
+        const scene = sanitize(`{{ narration|replace('\n',' ') }}`);
+        const t = sanitize(threat.explain||'');
+        const c = sanitize(card.explain||'');
+        const r = sanitize(pairReason||'');
+        modalTitle.textContent = `この場面の整理`;
+        const html = `
+          <div><strong>いまの場面</strong><br>${scene}</div>
+          <div style="margin-top:.8rem"><strong>感じやすい不安</strong><br>${t}</div>
+          <div style="margin-top:.8rem"><strong>この場面での工夫</strong><br>${c}</div>
+          ${r ? `<div style=\"margin-top:.8rem\"><strong>ねらい</strong><br>${r}</div>` : ''}
+        `;
+        modalBody.innerHTML = html;
+        modal.style.display='flex';
+      }
+
+      let selectedCard = null;
+      const applied = new Set(); // "card->threat" pairs to avoid duplicates
+      document.querySelectorAll('#cards .card').forEach(el => {
+        el.addEventListener('dragstart', (e)=>{
+          e.dataTransfer.setData('text/plain', JSON.stringify({ id: el.getAttribute('data-card-id'), label: el.getAttribute('data-card-label') }));
+          selectedCard = { id: el.getAttribute('data-card-id'), label: el.getAttribute('data-card-label') };
+          document.querySelectorAll('#cards .card').forEach(c=>c.style.outline='');
+          el.style.outline='2px solid #60a5fa';
+        });
+        el.addEventListener('click', ()=>{
+          selectedCard = { id: el.getAttribute('data-card-id'), label: el.getAttribute('data-card-label') };
+          document.querySelectorAll('#cards .card').forEach(c=>c.style.outline='');
+          el.style.outline='2px solid #60a5fa';
+        });
+      });
+
+      document.querySelectorAll('#threats .slot').forEach(slot => {
+        slot.addEventListener('dragover', (e)=>{ e.preventDefault(); slot.classList.add('hover'); });
+        slot.addEventListener('dragleave', ()=>{ slot.classList.remove('hover'); });
+        slot.addEventListener('drop', async (e)=>{
+          e.preventDefault(); slot.classList.remove('hover');
+          let payload = e.dataTransfer.getData('text/plain');
+          try { payload = JSON.parse(payload); } catch { payload = { id: payload, label: payload }; }
+          const cardId = payload.id; const label = payload.label||cardId; const threatId = slot.getAttribute('data-threat-id');
+          const key = `${cardId}->${threatId}`;
+          if (applied.has(key)) return; // prevent duplicates
+          applied.add(key);
+          if ({{ 'true' if persist else 'false' }}){
+            await fetch(`/lab/${sid}/act`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({ actor_id: actor, actor_role: 'responder', act: 'mitigate', note: key }) });
+          }
+          const tag=document.createElement('span'); tag.textContent=label; tag.dataset.key = key; tag.style.cursor='pointer';
+          tag.title='クリックで外す';
+          tag.addEventListener('click', async ()=>{
+            applied.delete(key);
+            tag.remove();
+            if ({{ 'true' if persist else 'false' }}){
+              await fetch(`/lab/${sid}/act`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({ actor_id: actor, actor_role: 'responder', act: 'mitigate_remove', note: key }) });
+            }
+          });
+          slot.querySelector('.applied').appendChild(tag); notify();
+          // show explanation
+          const cardMeta = {label, explain: (document.querySelector(`.card[data-card-id='${cardId}']`)?.dataset.cardExplain)||''};
+          const threatMeta = {label: slot.querySelector('div').textContent.trim(), explain: slot.dataset.threatExplain||''};
+          const ds = document.querySelector('.grid')?.dataset || {};
+          const pairReason = (ds.pairThreat === threatId && ds.pairCard === cardId) ? (ds.pairReason || '') : '';
+          explain(cardMeta, threatMeta, pairReason);
+        });
+        slot.addEventListener('click', async (e)=>{
+          if (e.target.closest('.applied span')) return; // handled by tag click
+          if (!selectedCard) return; const threatId = slot.getAttribute('data-threat-id');
+          const key = `${selectedCard.id}->${threatId}`;
+          if (applied.has(key)) return;
+          applied.add(key);
+          if ({{ 'true' if persist else 'false' }}){
+            await fetch(`/lab/${sid}/act`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({ actor_id: actor, actor_role: 'responder', act: 'mitigate', note: key }) });
+          }
+          const tag=document.createElement('span'); tag.textContent=selectedCard.label; tag.dataset.key = key; tag.style.cursor='pointer'; tag.title='クリックで外す';
+          tag.addEventListener('click', async ()=>{
+            applied.delete(key); tag.remove();
+            if ({{ 'true' if persist else 'false' }}){
+              await fetch(`/lab/${sid}/act`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({ actor_id: actor, actor_role: 'responder', act: 'mitigate_remove', note: key }) });
+            }
+          });
+          slot.querySelector('.applied').appendChild(tag); notify();
+          const cardMeta = {label: selectedCard.label, explain: (document.querySelector(`.card[data-card-id='${selectedCard.id}']`)?.dataset.cardExplain)||''};
+          const threatMeta = {label: slot.querySelector('div').textContent.trim(), explain: slot.dataset.threatExplain||''};
+          const ds = document.querySelector('.grid')?.dataset || {};
+          const pairReason = (ds.pairThreat === threatId && ds.pairCard === selectedCard.id) ? (ds.pairReason || '') : '';
+          explain(cardMeta, threatMeta, pairReason);
+        });
+      });
+
+      // (おすすめボタンは表示しません。必要に応じてD&D/クリックで適用してください)
+    })();
+  </script>
+</body>
+</html>
