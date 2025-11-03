@@ -240,7 +240,7 @@ LLM評価: 「理解度 LOW」
   - 医師も忙しい中で学習コストを払えるか？
 - **UI/UXの不在**:
   - 技術仕様は詳細だがUIの具体像が見えない
-  - 「HTMX + Tailwind」だけでは不十分
+  - 「HTMX + Tailwind」だけでは不十分（インタラクティブな理解度可視化、リアルタイムフィードバック、多様な入力方法などの具体的UX設計が必要）
 - **アクセシビリティの欠如**:
   - 高齢者、障害者、IT リテラシーが低い人への配慮は？
   - スマートフォンで使えるのか？
@@ -594,7 +594,7 @@ Concordia が真に価値あるプロジェクトになるためには、**批�
 
 ### 哲学・倫理
 - Hans-Georg Gadamer, "Truth and Method" (理解の解釈学)
-- Jürgen Habermas, "Theory of Communicative Action" (コミュニケーション的行為)
+- Jürgen Habermas, "Theory of Communicative Action" (コミュニケイション的行為)
 - Paul Ricoeur, "Oneself as Another" (自己と他者)
 
 ### 医療倫理
