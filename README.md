@@ -19,7 +19,7 @@
 
 詳しくは `docs/ARCHITECTURE_TWO_LANES.md` と `docs/CONSENT_PHILOSOPHY.md` を参照してください。
 
-あわせて、汎用レイヤーの“公開URLで共有できる最小プレイグラウンド”として Consent Lab を用意しています。
+あわせて、汎用レイヤーの"公開URLで共有できる最小プレイグラウンド"として Consent Lab を用意しています。
 - 起動とルール: `docs/CONSENT_LAB.md`
 
 ## ローカル起動（Docker不要）

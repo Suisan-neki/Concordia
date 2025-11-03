@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="240" viewBox="0 0 900 240">
+  <style>
+    .box{fill:#ffffff;stroke:#111;stroke-width:2}
+    .label{font-family:system-ui, sans-serif;font-size:16px;fill:#111}
+    .title{font-weight:700}
+    .arrow{stroke:#111;stroke-width:2;marker-end:url(#arrow)}
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#111" />
+    </marker>
+  </defs>
+  <!-- small/medium/large agreements -->
+  <rect class="box" x="40" y="40" width="220" height="70" rx="8"/>
+  <text class="label title" x="60" y="70">小さな合意</text>
+  <text class="label" x="60" y="95">家族の約束・チームの取り決め</text>
+
+  <rect class="box" x="340" y="40" width="220" height="70" rx="8"/>
+  <text class="label title" x="360" y="70">中くらいの合意</text>
+  <text class="label" x="360" y="95">規約・雇用・サプライ契約</text>
+
+  <rect class="box" x="640" y="40" width="220" height="70" rx="8"/>
+  <text class="label title" x="660" y="70">大きな合意</text>
+  <text class="label" x="660" y="95">研究参加・政策・医療意思</text>
+
+  <!-- common trace -->
+  <rect class="box" x="140" y="150" width="620" height="60" rx="8"/>
+  <text class="label title" x="160" y="180">共通: 理解行動の往復</text>
+  <text class="label" x="420" y="180">説明 → 質問 → 再説明 → 保留 → 再閲覧</text>
+
+  <!-- arrows -->
+  <line class="arrow" x1="150" y1="110" x2="300" y2="150"/>
+  <line class="arrow" x1="450" y1="110" x2="450" y2="150"/>
+  <line class="arrow" x1="750" y1="110" x2="600" y2="150"/>
+</svg>
+

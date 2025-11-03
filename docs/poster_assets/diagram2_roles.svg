@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="260" viewBox="0 0 900 260">
+  <style>
+    .box{fill:#fff;stroke:#111;stroke-width:2}
+    .label{font-family:system-ui, sans-serif;font-size:16px;fill:#111}
+    .title{font-weight:700}
+    .arrow{stroke:#111;stroke-width:2;marker-end:url(#arrow)}
+    .cap{font-size:14px;fill:#333}
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#111" />
+    </marker>
+  </defs>
+  <text class="label title" x="340" y="30">役割分担</text>
+  <text class="cap" x="285" y="50">EHR は医療行為、Concordia は理解行動の痕跡</text>
+
+  <rect class="box" x="80" y="80" width="320" height="140" rx="10"/>
+  <text class="label title" x="100" y="110">EHR</text>
+  <text class="label" x="100" y="135">・医療行為の法的/業務記録</text>
+  <text class="label" x="100" y="160">・所見/処方/検査/指示</text>
+  <text class="label" x="100" y="185">・編集は院内規程</text>
+
+  <rect class="box" x="500" y="80" width="320" height="140" rx="10"/>
+  <text class="label title" x="520" y="110">Concordia</text>
+  <text class="label" x="520" y="135">・理解行動の痕跡（イベント）</text>
+  <text class="label" x="520" y="160">・チェーン/署名/時刻で検証</text>
+  <text class="label" x="520" y="185">・追記/撤回は履歴で扱う</text>
+
+  <line class="arrow" x1="400" y1="150" x2="500" y2="150"/>
+  <text class="cap" x="410" y="140">疎結合</text>
+</svg>
+

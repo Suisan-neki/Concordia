@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220">
+  <style>
+    .box{fill:#fff;stroke:#111;stroke-width:2}
+    .label{font-family:system-ui, sans-serif;font-size:15px;fill:#111}
+    .title{font-weight:700}
+    .arrow{stroke:#111;stroke-width:2;marker-end:url(#arrow)}
+    .cap{font-size:12px;fill:#333}
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#111" />
+    </marker>
+  </defs>
+  <text class="label title" x="260" y="26">“責めない数”の処理経路（秘匿集計 + DP）</text>
+
+  <rect class="box" x="40" y="70" width="170" height="80" rx="10"/>
+  <text class="label" x="60" y="100">理解行動ログ</text>
+  <text class="cap" x="60" y="120">events: clarify等</text>
+
+  <rect class="box" x="260" y="70" width="200" height="80" rx="10"/>
+  <text class="label" x="280" y="100">秘匿集計（2サーバ）</text>
+  <text class="cap" x="280" y="120">加法分散で個票不可視</text>
+
+  <rect class="box" x="520" y="70" width="120" height="80" rx="10"/>
+  <text class="label" x="540" y="100">DPノイズ</text>
+  <text class="cap" x="540" y="120">ε 設定</text>
+
+  <rect class="box" x="680" y="70" width="180" height="80" rx="10"/>
+  <text class="label" x="700" y="100">穏やかなメッセージ</text>
+  <text class="cap" x="700" y="120">Calm/Observe/Focus</text>
+
+  <line class="arrow" x1="210" y1="110" x2="260" y2="110"/>
+  <line class="arrow" x1="460" y1="110" x2="520" y2="110"/>
+  <line class="arrow" x1="640" y1="110" x2="680" y2="110"/>
+</svg>
+

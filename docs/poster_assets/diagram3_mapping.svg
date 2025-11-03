@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360">
+  <style>
+    .box{fill:#fff;stroke:#111;stroke-width:2}
+    .label{font-family:system-ui, sans-serif;font-size:15px;fill:#111}
+    .title{font-weight:700}
+    .arrow{stroke:#111;stroke-width:2;marker-end:url(#arrow)}
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#111" />
+    </marker>
+  </defs>
+  <text class="label title" x="330" y="26">脅威 → 技術 → 効き目（対応表）</text>
+
+  <rect class="box" x="40" y="60" width="240" height="250" rx="10"/>
+  <text class="label title" x="60" y="88">内在的脅威</text>
+  <text class="label" x="60" y="116">・疑われる恐れ（医師）</text>
+  <text class="label" x="60" y="140">・発言の閉塞（患者）</text>
+  <text class="label" x="60" y="164">・過剰監視（第三者）</text>
+  <text class="label" x="60" y="188">・システムの圧力化</text>
+
+  <rect class="box" x="330" y="60" width="240" height="250" rx="10"/>
+  <text class="label title" x="350" y="88">セキュリティ技術</text>
+  <text class="label" x="350" y="116">・Merkle + アンカー</text>
+  <text class="label" x="350" y="140">・Ed25519 + 時刻</text>
+  <text class="label" x="350" y="164">・目的限定可視性</text>
+  <text class="label" x="350" y="188">・秘匿集計 + DP</text>
+
+  <rect class="box" x="620" y="60" width="240" height="250" rx="10"/>
+  <text class="label title" x="640" y="88">効き目（期待）</text>
+  <text class="label" x="640" y="116">・記録は動かない安心</text>
+  <text class="label" x="640" y="140">・押させられていない証跡</text>
+  <text class="label" x="640" y="164">・見せすぎない透明性</text>
+  <text class="label" x="640" y="188">・“責めない数”の提示</text>
+
+  <line class="arrow" x1="280" y1="120" x2="330" y2="120"/>
+  <line class="arrow" x1="280" y1="144" x2="330" y2="144"/>
+  <line class="arrow" x1="280" y1="168" x2="330" y2="168"/>
+  <line class="arrow" x1="280" y1="192" x2="330" y2="192"/>
+
+  <line class="arrow" x1="570" y1="120" x2="620" y2="120"/>
+  <line class="arrow" x1="570" y1="144" x2="620" y2="144"/>
+  <line class="arrow" x1="570" y1="168" x2="620" y2="168"/>
+  <line class="arrow" x1="570" y1="192" x2="620" y2="192"/>
+</svg>
+

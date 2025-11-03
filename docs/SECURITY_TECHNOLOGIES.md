@@ -29,6 +29,52 @@
 注意点
 - 仕様（ハッシュ順序・対象）を文書に固定。将来変更は並行運用で移行。
 
+現行仕様（PoC/実装に即した詳細）
+- アルゴリズム: SHA‑256 単独（BLAKE3/MMRは計画中）。
+- チェーンハッシュ対象（イベント包絡）: 下記フィールドをカノニカル化して `prev_hash` と連結。
+  - `session_id: str`
+  - `actor_id: str`
+  - `actor_type: str`（Enum の `.value`、例: `"doctor"`）
+  - `act_type: str`（例: `"agree"`）
+  - `payload: object`（任意JSON）
+  - `artifact_hash: str | null`
+  - `signature: str | null`（署名原文のBase64。存在してもハッシュ対象に含む）
+  - `created_at: str`（UTC ISO8601）
+- カノニカル化: Python `json.dumps(..., sort_keys=True, separators=(",", ":"))` を使用（空白なし・キー順固定）。
+- ダイジェスト計算: `SHA256(canonical_bytes(event_envelope) || prev_hash_bytes)` → `curr_hash (hex)`。
+- 保存: `UnderstandingEvent.prev_hash`/`curr_hash` にHEXで格納。
+- 検証CLI: `scripts/verify_chain.py --session-id <id>` が同一手順で再計算し、差分を報告。
+
+検証手順（擬似コード）
+```
+prev = None
+for e in events_sorted_by_created_at:
+  env = {
+    "session_id": e.session_id,
+    "actor_id": e.actor_id,
+    "actor_type": e.actor_type.value,
+    "act_type": e.act_type.value,
+    "payload": e.payload,
+    "artifact_hash": e.artifact_hash,
+    "signature": e.signature,
+    "created_at": e.created_at.isoformat(),
+  }
+  expected = SHA256(canonical(env) || hex_to_bytes(prev))
+  assert e.prev_hash == prev
+  assert e.curr_hash == expected
+  prev = e.curr_hash
+```
+
+失敗モードと対処
+- created_at を書き換えるとチェーンが崩れる → UTC固定・サーバ生成で回避（現行はサーバ側で付与）。
+- イベントの順序入れ替え → `prev_hash` 不一致で検出。
+- `payload` 局所改ざん → `curr_hash` 再計算で不一致検出。
+
+将来拡張（計画）
+- BLAKE3 併記: `curr_hash_sha256` と `curr_hash_b3` の二系統を保存。
+- MMR（日次ルート）: 1日の末尾に `day_root` を生成し、外部アンカーへ提出。
+- 外部アンカー: OTS/Roughtime。オフライン時はキューし、接続回復時に一括送信。
+
 ---
 
 ## 2) 署名と時刻の裏付け（Roughtime／二重署名／FROSTは将来）
@@ -48,6 +94,20 @@
 実装イメージ
 - 署名対象ダイジェスト: イベント本体 + `prev_hash`（順序を仕様化）。
 - 失敗は明示的に拒否。鍵はPoCではファイル/DB、後でHSMへ移行可能に。
+
+現行仕様（署名ベリファイの詳細）
+- 署名要求の対象Act: `agree`/`reagree`/`revoke`。
+- 公開鍵登録: `ActorKey(actor_id, public_key_hex)` としてDBに保存（Ed25519 Raw 32B をHEX）。
+- 署名データ（クライアントが署名するメッセージ）
+  - カノニカルJSON: `{session_id, actor_id, actor_type, act_type, payload, artifact_hash}`
+  - 署名アルゴリズム: Ed25519（メッセージ＝上記カノニカルバイト列）。
+  - エンコード: 署名は Base64（現行実装ではDBにそのまま格納、名前は `signature_hex` だがBase64）。
+- ベリファイ: ルーターが公開鍵で検証し、OKならイベントを追記。失敗時は 400。
+- 時刻証明: `infra/tsa.request_timestamp()` はRFC3161スタブ（`{digest, timestamp}`）を記録（将来Roughtime/OTSに置換）。
+
+注意（設計上の補足）
+- 現行の署名は `prev_hash`/`created_at` を直接は含めない（チェーンがそれを保護）。
+- 将来案: `sign(curr_hash_bytes)` へ移行、もしくは「二者署名（端末＋サーバ）」で合意フリーズ力を強化。
 
 ---
 
@@ -69,6 +129,18 @@
 - 特徴量: clarify / re_explain / re_view / 合意までの時間間隔 / シグナル多様性 / 主導度。
 - 重み・閾値は設定ファイルで調整可能（`.env`/`pyproject.toml`）。
 
+現行仕様（PoCの算出ロジック）
+- 入力: セッション内の UnderstandingEvent 群。
+- 指標: clarify_request_rate, re_explain_rate, post_view_rate, pending_rate, revoke_rate。
+- スコア式: `positive = 0.4*clarify + 0.35*post_view + 0.25*re_explain`、`penalties = 0.2*pending + 0.1*revoke`、`score = positive - penalties`。
+- ゾーン決定: `score >= 0.15 → Calm`、`>= -0.05 → Observe`、それ以外は `Focus`。
+- 実装: `concordia/app/services/telemetry.py`（定数はPoC、責めない表現で提示）。
+
+将来仕様（秘匿集計の方針）
+- 2サーバ加法秘密分散: 各側が `x = r` と `y = value - r` を保持し、合算のみ復元。
+- 差分プライバシ: 予算 `ε` を設定し、カウントにラプラス/ガウシアンノイズを注入（集計時）。
+- 出力は“提案文”のみ。ランキング/分位表示は行わない。
+
 ---
 
 ## 4) 権限は“軽く確実に”（Macaroons）。ABACは当面スキップ
@@ -87,6 +159,16 @@
 実装イメージ
 - 失効/スコープ検証を共通ユーティリティに集約。ZCAP‑LD 等は研究枠に。
 
+現行仕様（最小ABAC）
+- ポリシー: `policy.is_allowed(PolicyContext(subject_id, role), action, resource_owner)`。
+- 許可例: 患者は `submit_clarify/revisit/send_signal` 自己操作、`view_timeline` は自分のセッションのみ閲覧可。医師はフルアクセス（PoC）。
+- ファイル: `concordia/app/domain/policy.py`。
+
+将来仕様（Macaroons設計）
+- Caveats: `purpose`, `ttl`, `scope=session:<id>`, `role=doctor|patient`。
+- 付与/検証: 署名鍵管理をユーティリティに集約。失効リストと短TTLで運用。
+- 表示: 目的と有効期限をUIで明示し、“見せすぎない透明性”を担保。
+
 ---
 
 ## 5) 検証が主役の最小UI（とCLI）
@@ -104,6 +186,18 @@
 
 実装イメージ
 - UIは増やさない方針。検証と状態表示に絞る。
+
+CLI/検証導線（現行）
+- チェーン検証: `python scripts/verify_chain.py --session-id <id>`。
+- 医師要約: `python scripts/doctor_summary.py --doctor-id <id>`（責めない要約）。
+- 疑似対話: `python scripts/dialog_cli.py`（イベント投入の最小体験）。
+
+データ形式の参照実装
+- カノニカル化: `concordia/app/domain/merkle.py: canonical_bytes`
+- チェーン計算: `concordia/app/domain/merkle.py: compute_chain_hash`
+- 追記処理: `concordia/app/services/ledger.py: LedgerService.append`
+- 署名検証: `concordia/app/routers/events.py: _verify_signature_input`
+
 
 ---
 
