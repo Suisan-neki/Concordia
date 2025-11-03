@@ -46,6 +46,7 @@ def load_events(db: Session, session_id: str | None) -> list[UnderstandingEvent]
 def verify(events: list[UnderstandingEvent]) -> bool:
     ok = True
     prev_hash = None
+    last_ts = None
     for event in events:
         payload = {
             "session_id": event.session_id,
@@ -54,7 +55,6 @@ def verify(events: list[UnderstandingEvent]) -> bool:
             "act_type": event.act_type.value,
             "payload": event.payload,
             "artifact_hash": event.artifact_hash,
-            "signature": event.signature,
             "created_at": event.created_at.isoformat(),
         }
         expected_hash = compute_chain_hash(payload, prev_hash)
@@ -72,6 +72,14 @@ def verify(events: list[UnderstandingEvent]) -> bool:
                 file=sys.stderr,
             )
             ok = False
+        if last_ts and event.created_at < last_ts:
+            print(
+                f"[WARN] created_at monotonicity break at event {event.id}: "
+                f"{event.created_at.isoformat()} < {last_ts.isoformat()}",
+                file=sys.stderr,
+            )
+            ok = False
+        last_ts = event.created_at
         prev_hash = event.curr_hash
     if ok:
         print(

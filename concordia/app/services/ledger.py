@@ -32,6 +32,8 @@ class LedgerService:
             created_at=timestamp,
         )
 
+        # Chain hash excludes signature to avoid circular dependency
+        # and to keep hashing invariant stable across signature formats.
         event.curr_hash = compute_chain_hash(
             {
                 "session_id": event.session_id,
@@ -40,7 +42,6 @@ class LedgerService:
                 "act_type": event.act_type,
                 "payload": event.payload,
                 "artifact_hash": event.artifact_hash,
-                "signature": event.signature,
                 "created_at": event.created_at.isoformat(),
             },
             prev_hash,

@@ -38,8 +38,8 @@
   - `act_type: str`（例: `"agree"`）
   - `payload: object`（任意JSON）
   - `artifact_hash: str | null`
-  - `signature: str | null`（署名原文のBase64。存在してもハッシュ対象に含む）
   - `created_at: str`（UTC ISO8601）
+  - （注）`signature` はハッシュ対象外。署名は別途検証・記録。
 - カノニカル化: Python `json.dumps(..., sort_keys=True, separators=(",", ":"))` を使用（空白なし・キー順固定）。
 - ダイジェスト計算: `SHA256(canonical_bytes(event_envelope) || prev_hash_bytes)` → `curr_hash (hex)`。
 - 保存: `UnderstandingEvent.prev_hash`/`curr_hash` にHEXで格納。
@@ -56,7 +56,6 @@ for e in events_sorted_by_created_at:
     "act_type": e.act_type.value,
     "payload": e.payload,
     "artifact_hash": e.artifact_hash,
-    "signature": e.signature,
     "created_at": e.created_at.isoformat(),
   }
   expected = SHA256(canonical(env) || hex_to_bytes(prev))
@@ -106,8 +105,8 @@ for e in events_sorted_by_created_at:
 - 時刻証明: `infra/tsa.request_timestamp()` はRFC3161スタブ（`{digest, timestamp}`）を記録（将来Roughtime/OTSに置換）。
 
 注意（設計上の補足）
-- 現行の署名は `prev_hash`/`created_at` を直接は含めない（チェーンがそれを保護）。
-- 将来案: `sign(curr_hash_bytes)` へ移行、もしくは「二者署名（端末＋サーバ）」で合意フリーズ力を強化。
+- 現行の署名は `prev_hash`/`created_at` を直接は含めない（チェーンがそれらの改ざんを検知）。
+- 将来案: `content_hash = SHA256(canonical(event_without_signature))` を作り、`sign(content_hash || prev_hash)` へ移行。もしくは `sign(curr_hash)` とし二者署名（端末＋サーバ）でフリーズ力を強化。
 
 ---
 
